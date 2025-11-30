@@ -8,6 +8,7 @@ import (
 
 type TwitchHelixService struct {
 	nickname string
+	userID   string
 	client   *helix.Client
 }
 
@@ -17,6 +18,10 @@ func (s *TwitchHelixService) Client() *helix.Client {
 
 func (s *TwitchHelixService) GetNickname() string {
 	return s.nickname
+}
+
+func (s *TwitchHelixService) GetUserID() string {
+	return s.userID
 }
 
 func NewTwitchHelixService(client *helix.Client) (*TwitchHelixService, error) {
@@ -34,5 +39,6 @@ func (s *TwitchHelixService) TestConnection() error {
 		return err
 	}
 	s.nickname = strings.ToLower(r.Data.Users[0].Login)
+	s.userID = r.Data.Users[0].ID
 	return nil
 }

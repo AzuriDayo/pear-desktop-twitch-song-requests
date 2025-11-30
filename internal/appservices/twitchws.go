@@ -2,111 +2,134 @@ package appservices
 
 import (
 	"context"
-	"errors"
 	"log"
 	"os"
+	"strings"
 
-	"github.com/gorilla/websocket"
-	"github.com/nicklaw5/helix/v2"
+	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/staticservices"
+
+	"github.com/joeyak/go-twitch-eventsub/v3"
 )
 
-// TODO: NOT VALIDATED, NEED TO CHECK AGAIN AFTER FINISHING IRC
-
-type twitchWS struct {
+type TwitchWS struct {
 	stopChan          chan struct{}
 	mainTwitchChannel string
-	helixMain         *helix.Client
-	conn              *websocket.Conn
+	helixMain         *staticservices.TwitchHelixService
+	client            *twitch.Client
 	log               *log.Logger
-	msgChan           chan struct{}
+	msgChan           chan []byte
 	rcvChan           chan []byte
+	subs              []twitch.EventSubscription
+	setupHandlers     func(log *log.Logger, client *twitch.Client)
 }
 
-func (s *twitchWS) StartCtx(ctx context.Context) error {
-	const twitchWsHost = "wss://eventsub.wss.twitch.tv/ws"
-	// TODO: get helixMain channel name
-	s.log.Println("Twitch IRC service starting...")
-	r, err := s.helixMain.GetUsers(&helix.UsersParams{})
-	if err != nil {
-		s.log.Println("Error getting main Twitch user info:", err)
-		return err
-	}
-	s.mainTwitchChannel = r.Data.Users[0].Login
+func (s *TwitchWS) StartCtx(ctx context.Context) error {
+	s.log.Println("Twitch WS service starting...")
+	s.mainTwitchChannel = strings.ToLower(s.helixMain.GetNickname())
 
-	// Connect to Twitch IRC WebSocket
-	connectRetries := 0
-	for s.conn == nil {
-		conn, _, err := websocket.DefaultDialer.DialContext(ctx, twitchWsHost, nil)
-		if err != nil {
-			if connectRetries > 128 {
-				s.log.Println("Last retry took 128s and still didn't reconnect")
-				s.log.Println("Force closing")
-				s.Stop() // no error to handle because this was never initialized
-				return errors.New("failed to retry 128s later")
+	s.client = twitch.NewClient()
+	s.client.OnWelcome(func(message twitch.WelcomeMessage) {
+		s.log.Printf("WELCOME: subscribing to events...\n")
+		clientID := os.Getenv("TWITCH_CLIENT_ID")
+		accessToken := s.helixMain.Client().GetUserAccessToken()
+		userID := s.helixMain.GetUserID()
+
+		for _, event := range s.subs {
+			s.log.Printf("subscribing to %s\n", event)
+
+			condition := map[string]string{
+				"broadcaster_user_id": userID,
 			}
-			s.log.Println("Failed to connect", err)
-			s.log.Println("Retrying")
-			if connectRetries == 0 {
-				connectRetries = 1
-			} else {
-				connectRetries *= 2
+			if event == twitch.SubChannelChatMessage {
+				condition["user_id"] = userID
 			}
-			continue
-		}
-		connectRetries = 0
-		s.conn = conn
-	}
-	go func() {
-		for {
-			_, message, err := s.conn.ReadMessage()
+
+			_, err := twitch.SubscribeEvent(twitch.SubscribeRequest{
+				SessionID:   message.Payload.Session.ID,
+				ClientID:    clientID,
+				AccessToken: accessToken,
+				Event:       event,
+				Condition:   condition,
+			})
 			if err != nil {
-				s.log.Println("Error reading Twitch WS message:", err)
-				break
+				s.log.Printf("ERROR: %v\n", err)
 			}
-			s.log.Println("Received Twitch WS message", string(message))
+		}
+	})
+	s.client.OnRevoke(func(message twitch.RevokeMessage) {
+		s.log.Printf("REVOKE: %v\n", message)
+	})
+	s.setupHandlers(s.log, s.client)
+
+	go func() {
+		err := s.client.Connect()
+		if err != nil {
+			s.Stop()
 		}
 	}()
+
+	// stop handler
+	go func() {
+		<-ctx.Done()
+		s.Stop()
+	}()
+
+	s.log.Println("Twitch WS service started.")
 	return nil
 }
-func (s *twitchWS) Stop() error {
-	s.log.Println("Twitch IRC service stopping...")
+func (s *TwitchWS) Stop() error {
+	defer func() {
+		if r := recover(); r != nil {
+			s.log.Println("Recovered in Twitch WS Stop():", r)
+			// possibly already stopped and sending into a closed channel
+		}
+	}()
+	s.log.Println("Twitch WS service stopping...")
 	s.stopChan <- struct{}{}
 	return nil
 }
 
-func (s *twitchWS) MsgChan() chan struct{} {
-	return s.msgChan
+func (s *TwitchWS) Client() *twitch.Client {
+	return s.client
 }
 
-func (s *twitchWS) RcvChan() chan []byte {
-	return s.rcvChan
+func (s *TwitchWS) MsgChan() chan any {
+	return nil
 }
 
-func (s *twitchWS) Log() *log.Logger {
+func (s *TwitchWS) RcvChan() chan any {
+	return nil
+}
+
+func (s *TwitchWS) Log() *log.Logger {
 	return s.log
 }
 
-func TwitchWS(helixMain *helix.Client) appService[struct{}, []byte] {
-	stopChan := make(chan struct{}, 1)
-	s := &twitchWS{
+func NewTwitchWS(helixMain *staticservices.TwitchHelixService, helixBot *staticservices.TwitchHelixService, subs []twitch.EventSubscription, setupHandlers func(log *log.Logger, client *twitch.Client)) *TwitchWS {
+	stopChan := make(chan struct{})
+	s := &TwitchWS{
 		helixMain:         helixMain,
 		log:               log.New(os.Stderr, "TWITCH_WS ", log.Ldate|log.Ltime),
-		msgChan:           make(chan struct{}),
-		rcvChan:           make(chan []byte),
+		msgChan:           nil,
+		rcvChan:           nil,
 		stopChan:          stopChan,
-		mainTwitchChannel: "",  // filled duing startup
-		conn:              nil, // filled during startup
+		mainTwitchChannel: "", // filled duing startup
+		subs:              subs,
+		setupHandlers:     setupHandlers,
 	}
 
 	go func() {
 		<-stopChan
 		close(stopChan)
-		close(s.msgChan)
-		err := s.conn.Close()
-		if err != nil {
-			s.log.Println("Error closing Twitch IRC connection:", err)
-			s.log.Println("Ignoring error...")
+		s.log.Println("Twitch WS service stopping...")
+		if s.client != nil {
+			err := s.client.Close()
+			if err != nil {
+				s.log.Printf("ERROR closing Twitch WS client: %v\n", err)
+			}
+			s.client = nil
 		}
+		s.log.Println("Twitch WS service stopped.")
 	}()
 
 	return s
