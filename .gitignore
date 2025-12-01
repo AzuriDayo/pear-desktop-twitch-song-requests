@@ -95,5 +95,6 @@ response*.json
 cmd/tester
 control-panel/build
 venv
-main.exe
+/main.exe
 pear-desktop-twitch-song-requests.db
+/main
