@@ -1,9 +1,11 @@
 package helpers
 
 import (
+	"bufio"
 	"log"
+	"os"
 
-	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/db"
+	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/databaseconn"
 )
 
 func PreflightTest() {
@@ -11,24 +13,15 @@ func PreflightTest() {
 
 	// Test Connection Postgres Database
 	log.Println("Testing sqlite")
-	dB, closeAndUnlock, err := db.NewDBConnection()
-	if err != nil {
-		log.Println("Failed to connect to sqlite db")
-		log.Fatal(err)
-	}
-	defer closeAndUnlock()
-	if err := dB.Ping(); err != nil {
-		log.Println("Failed to Ping sqlite")
-		log.Fatal(err)
-	}
-	log.Println("SQLite successfully initialized")
-
 	// Apply sqlite migrations
 	log.Println("Applying sqlite migrations")
-	err = db.Migrate()
+	err := databaseconn.Migrate()
 	if err != nil {
 		log.Println("Failed to apply sqlite migrations")
-		log.Fatal(err)
+		log.Println(err)
+		log.Println("Press Enter to exit...")
+		bufio.NewReader(os.Stdin).ReadBytes('\n')
+		os.Exit(1)
 	}
 
 	// None for now
