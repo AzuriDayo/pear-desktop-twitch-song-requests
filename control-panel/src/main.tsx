@@ -16,11 +16,11 @@ root.render(
 		<Provider store={store}>
 			<BrowserRouter>
 				<Routes>
-					<Route path="/" element={<App />} />
-					<Route path="/settings" element={<></>} />
-					<Route path="/queue" element={<></>} />
-					<Route path="/oauth/twitch-connect" element={<OAuthTwitch />} />
-					<Route path="/oauth/twitch-result" element={<OAuthTwitch />} />
+					<Route path="/" element={<>home</>} />
+					<Route path="/settings" element={<>settings</>} />
+					<Route path="/queue" element={<>queue</>} />
+					<Route path="/oauth/twitch-connect" element={<App />} />
+					<Route path="/oauth/twitch-result" element={<>twitch result</>} />
 					<Route path="/oauth/twitch" element={<OAuthTwitch />} />
 				</Routes>
 			</BrowserRouter>

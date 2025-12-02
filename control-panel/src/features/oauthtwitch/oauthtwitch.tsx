@@ -71,7 +71,7 @@ export function OAuthTwitch() {
 			) : oAuthSuccessObj !== null ? (
 				<>{JSON.stringify(oAuthSuccessObj)}</>
 			) : (
-				<>default</>
+				<>Working...</>
 			)}
 		</div>
 	);
