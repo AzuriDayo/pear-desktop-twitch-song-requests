@@ -1,17 +1,18 @@
 package main
 
 import (
-	"context"
 	"embed"
-	"io/fs"
+	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"os/exec"
 	"runtime"
 
-	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/appservices"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/helpers"
 	_ "github.com/joho/godotenv/autoload"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 func main() {
@@ -22,14 +23,11 @@ func main() {
 }
 
 type App struct {
-	ctx           context.Context
-	twitchService appservices.TwitchWS
+	// twitchService appservices.TwitchWS
 }
 
 func NewApp() *App {
-	return &App{
-		ctx: context.TODO(),
-	}
+	return &App{}
 }
 
 //go:embed build/*
@@ -37,12 +35,15 @@ var staticControlPanelFS embed.FS
 
 func (a *App) Run() error {
 	log.Println("App is running on port 3999...")
-	http.HandleFunc("GET /api/twitch-oauth", a.handleTwitchOAuth)
-	buildFS, err := fs.Sub(staticControlPanelFS, "build")
-	if err != nil {
-		panic(err)
-	}
-	http.Handle("GET /", http.FileServer(http.FS(buildFS)))
+	// Echo instance
+	e := echo.New()
+
+	// Middleware
+	e.Use(middleware.Recover())
+	e.StaticFS("/", echo.MustSubFS(staticControlPanelFS, "build"))
+
+	apiV1 := e.Group("/api/v1")
+	apiV1.POST("/twitch-oauth", a.handleTwitchOAuth)
 
 	var cmd string
 	var args []string
@@ -55,11 +56,23 @@ func (a *App) Run() error {
 	default: // "linux", "freebsd", "openbsd", "netbsd"
 		cmd = "xdg-open"
 	}
-	args = append(args, "http://127.0.0.1:3999/")
+	args = append(args, "http://localhost:3999/") // must use localhost here because twitch does not allow 127.0.0.1
 	exec.Command(cmd, args...).Start()
-	return http.ListenAndServe(":3999", nil)
+	return e.Start("127.0.0.1:3999")
 }
 
-func (a *App) handleTwitchOAuth(w http.ResponseWriter, r *http.Request) {
+func (a *App) handleTwitchOAuth(c echo.Context) error {
 	// auth data in url hash string params as get request
+	body := c.Request().Body
+	rawBodyData, err := io.ReadAll(body)
+	if err != nil {
+		return err
+	}
+	defer body.Close()
+
+	authData := struct {
+		Something string
+	}{}
+	err = json.Unmarshal(rawBodyData, &authData)
+	return echo.NewHTTPError(http.StatusTeapot, "under construction", err)
 }
