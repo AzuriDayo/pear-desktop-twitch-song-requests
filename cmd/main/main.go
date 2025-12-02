@@ -6,16 +6,28 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
 	"runtime"
 
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/helpers"
-	_ "github.com/joho/godotenv/autoload"
+	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
+var DEBUG string
+
 func main() {
+	if DEBUG == "true" {
+		if m, err := godotenv.Read(".env"); err == nil {
+			err = os.Setenv("VITE_TWITCH_CLIENT_ID", m["VITE_TWITCH_CLIENT_ID"])
+			if err != nil {
+				panic(err)
+			}
+			log.Println("DEBUG: Overriding VITE_TWITCH_CLIENT_ID:", m["VITE_TWITCH_CLIENT_ID"])
+		}
+	}
 	helpers.PreflightTest()
 
 	app := NewApp()
