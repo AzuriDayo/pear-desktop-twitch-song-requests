@@ -4,8 +4,6 @@ import "./index.css";
 import App from "./App.tsx";
 import store from "./app/store";
 import { Provider } from "react-redux";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { OAuthTwitch } from "./features/oauthtwitch/oauthtwitch.tsx";
 
 const root = ReactDOM.createRoot(
 	document.getElementById("root") as HTMLElement,
@@ -14,16 +12,7 @@ const root = ReactDOM.createRoot(
 root.render(
 	<React.StrictMode>
 		<Provider store={store}>
-			<BrowserRouter>
-				<Routes>
-					<Route path="/" element={<>home</>} />
-					<Route path="/settings" element={<>settings</>} />
-					<Route path="/queue" element={<>queue</>} />
-					<Route path="/oauth/twitch-connect" element={<App />} />
-					<Route path="/oauth/twitch-result" element={<>twitch result</>} />
-					<Route path="/oauth/twitch" element={<OAuthTwitch />} />
-				</Routes>
-			</BrowserRouter>
+			<App />
 		</Provider>
 	</React.StrictMode>,
 );

@@ -1,21 +1,18 @@
 import { useEffect, useState } from "react";
+import { Container, Row, Col, Card, Alert } from "react-bootstrap";
+import { MusicPlayer } from "./features/musicplayer/MusicPlayer";
 import "./App.css";
 
 function App() {
 	const [params, setParams] = useState<URLSearchParams>();
+	const [oauthSuccess, setOauthSuccess] = useState(false);
 
 	// on page load, set the oauth params
 	useEffect(() => {
 		const params = new URLSearchParams();
-		params.append("response_type", "token");
-		params.append(
-			"client_id",
-			import.meta.env.VITE_TWITCH_CLIENT_ID ?? "7k7nl6w8e0owouonj7nb9g3k5s6gs5",
-		);
-		params.append(
-			"redirect_uri",
-			"http://" + window.location.host + "/oauth/twitch",
-		);
+		params.append("client_id", "7k7nl6w8e0owouonj7nb9g3k5s6gs5");
+		params.append("redirect_uri", "http://localhost:3999/");
+		params.append("response_type", "code");
 		params.append(
 			"scope",
 			[
@@ -32,18 +29,53 @@ function App() {
 			].join(" "),
 		);
 		setParams(params);
-		/*
-			example fragment: #access_token=73d0f8mkabpbmjp921asv2jaidwxn&scope=channel%3Amanage%3Apolls+channel%3Aread%3Apolls&state=c3ab8aa609ea11e793ae92361f002671&token_type=bearer
-			example error: ?error=redirect_mismatch&error_description=Parameter+redirect_uri+does+not+match+registered+URI
-		*/
+
+		// Check if we have OAuth code in URL (after redirect)
+		const urlParams = new URLSearchParams(window.location.search);
+		const code = urlParams.get("code");
+		if (code) {
+			setOauthSuccess(true);
+			// In a real app, you'd send this code to the backend
+			console.log("OAuth code received:", code);
+		}
 	}, []);
 
 	return (
-		<>
-			<a href={`https://id.twitch.tv/oauth2/authorize?${params}`}>
-				Connect with Twitch
-			</a>
-		</>
+		<Container className="py-4">
+			<Row>
+				<Col>
+					<h1 className="mb-4">
+						Pear Desktop - Twitch Song Request Control Panel
+					</h1>
+
+					{oauthSuccess && (
+						<Alert variant="success" className="mb-4">
+							<strong>Twitch OAuth successful!</strong> You are now connected to
+							Twitch.
+						</Alert>
+					)}
+
+					<Card className="mb-4">
+						<Card.Header>
+							<h5 className="mb-0">Twitch Integration</h5>
+						</Card.Header>
+						<Card.Body>
+							<p>
+								Connect your Twitch account to enable song requests from chat.
+							</p>
+							<a
+								href={`https://id.twitch.tv/oauth2/authorize?${params}`}
+								className="btn btn-primary"
+							>
+								Connect with Twitch
+							</a>
+						</Card.Body>
+					</Card>
+
+					<MusicPlayer />
+				</Col>
+			</Row>
+		</Container>
 	);
 }
 
