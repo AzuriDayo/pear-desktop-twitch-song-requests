@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from "react";
-import { useAppSelector, useAppDispatch } from "../../app/hooks";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 export function OAuthTwitch() {

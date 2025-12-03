@@ -4,6 +4,11 @@ const API_BASE_URL = "http://localhost:3999/api/v1";
 export interface MusicPlayerState {
 	isPlaying: boolean;
 	currentSong?: string;
+	artist?: string;
+	url?: string;
+	songDuration?: number;
+	imageSrc?: string;
+	elapsedSeconds?: number;
 	volume?: number;
 }
 

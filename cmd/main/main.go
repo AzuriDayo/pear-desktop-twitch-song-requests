@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os/exec"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/appservices"
@@ -28,7 +29,9 @@ func main() {
 
 type App struct {
 	pearDesktopService *staticservices.PearDesktopService
-	pearDesktopWS      *appservices.PearDesktopWS
+	pearDesktopWS      *appservices.PearDesktopService
+	currentPlayerState *staticservices.MusicPlayerState
+	stateMutex         sync.RWMutex
 	ctx                context.Context
 	cancel             context.CancelFunc
 }
@@ -40,7 +43,7 @@ func NewApp() *App {
 	pearDesktopService := staticservices.NewPearDesktopService()
 
 	// Initialize Pear Desktop websocket service
-	pearDesktopWS := appservices.NewPearDesktopWS()
+	pearDesktopWS := appservices.NewPearDesktopService()
 
 	return &App{
 		pearDesktopService: pearDesktopService,
@@ -59,18 +62,31 @@ func (a *App) Run() error {
 	// Ensure services are stopped on exit
 	defer a.cancel()
 
-	// Test Pear Desktop connection
+	// Test Pear Desktop connection and get initial state
 	if err := a.pearDesktopService.TestConnection(); err != nil {
 		log.Printf("Warning: Pear Desktop service not available: %v", err)
 	} else {
 		log.Println("Pear Desktop service connected successfully")
+
+		// Fetch initial player state
+		if initialState, err := a.pearDesktopService.GetInitialPlayerState(); err != nil {
+			log.Printf("Warning: Failed to get initial player state: %v", err)
+		} else {
+			a.stateMutex.Lock()
+			a.currentPlayerState = initialState
+			a.stateMutex.Unlock()
+			log.Printf("Initialized player state: %+v", initialState)
+		}
 	}
 
-	// Start Pear Desktop websocket service
-	if err := a.pearDesktopWS.StartCtx(a.ctx); err != nil {
-		log.Printf("Failed to start Pear Desktop WS service: %v", err)
-		return err
-	}
+	// Start Pear Desktop websocket service asynchronously
+	go func() {
+		if err := a.pearDesktopWS.StartCtx(a.ctx); err != nil {
+			log.Printf("Failed to start Pear Desktop WS service: %v", err)
+			// Don't fail the app, just log the error and continue
+			// The service will retry connection periodically
+		}
+	}()
 
 	// Start goroutine to handle music player state updates
 	go a.handleMusicPlayerUpdates()
@@ -132,10 +148,22 @@ func (a *App) handleTwitchOAuth(c echo.Context) error {
 }
 
 func (a *App) handleGetMusicState(c echo.Context) error {
+	// First try to get real-time data from websocket updates
+	a.stateMutex.RLock()
+	if a.currentPlayerState != nil {
+		state := a.currentPlayerState
+		a.stateMutex.RUnlock()
+		log.Printf("Returning real-time player state: %+v", state)
+		return c.JSON(http.StatusOK, state)
+	}
+	a.stateMutex.RUnlock()
+
+	// Fall back to REST API call
 	state, err := a.pearDesktopService.GetMusicPlayerState()
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to get music player state", err)
 	}
+	log.Printf("Returning REST API player state: %+v", state)
 	return c.JSON(http.StatusOK, state)
 }
 
@@ -159,10 +187,32 @@ func (a *App) handleMusicPlayerUpdates() {
 			return
 		case update := <-a.pearDesktopWS.RcvChan():
 			log.Printf("Received music player state update: %+v", update)
-			// Here you can add logic to handle state updates, such as:
-			// - Update database
-			// - Broadcast to other services
-			// - Trigger events based on state changes
+
+			a.stateMutex.Lock()
+			// If we don't have a current state, initialize it
+			if a.currentPlayerState == nil {
+				a.currentPlayerState = &staticservices.MusicPlayerState{}
+			}
+
+			// Update only the fields that changed based on the websocket message
+			if update.CurrentSong != "" {
+				// VIDEO_CHANGED message - update all song info
+				a.currentPlayerState.IsPlaying = update.IsPlaying
+				a.currentPlayerState.CurrentSong = update.CurrentSong
+				a.currentPlayerState.Artist = update.Artist
+				a.currentPlayerState.URL = update.URL
+				a.currentPlayerState.SongDuration = update.SongDuration
+				a.currentPlayerState.ImageSrc = update.ImageSrc
+				a.currentPlayerState.ElapsedSeconds = update.ElapsedSeconds
+				log.Printf("Updated song info: %s by %s (%ds)", update.CurrentSong, update.Artist, update.SongDuration)
+			} else if update.ElapsedSeconds >= 0 {
+				// POSITION_CHANGED message - only update elapsed time
+				a.currentPlayerState.ElapsedSeconds = update.ElapsedSeconds
+				log.Printf("Updated elapsed time: %d seconds", update.ElapsedSeconds)
+			}
+
+			log.Printf("Current player state: %+v", a.currentPlayerState)
+			a.stateMutex.Unlock()
 		}
 	}
 }
