@@ -40,9 +40,10 @@ type VideoChangedMessage struct {
 
 // WebSocketMessage represents any websocket message from Pear Desktop
 type WebSocketMessage struct {
-	Type     string   `json:"type"`
-	Position int      `json:"position,omitempty"`
-	Song     SongInfo `json:"song,omitempty"`
+	Type      string   `json:"type"`
+	Position  int      `json:"position,omitempty"`
+	IsPlaying *bool    `json:"isPlaying,omitempty"`
+	Song      SongInfo `json:"song"`
 }
 
 // WebSocketStateUpdate represents a music player state update from the websocket
@@ -150,6 +151,9 @@ func (s *PearDesktopService) handleMessages() {
 			case "POSITION_CHANGED":
 				// Position changed - update elapsed seconds
 				update.ElapsedSeconds = wsMsg.Position
+			case "PLAYER_STATE_CHANGED":
+				update.IsPlaying = *wsMsg.IsPlaying
+				update.ElapsedSeconds = wsMsg.Position
 
 			case "VIDEO_CHANGED":
 				// Video changed - extract song information
@@ -167,7 +171,7 @@ func (s *PearDesktopService) handleMessages() {
 				}
 
 			default:
-				s.log.Printf("Unknown message type: %s", wsMsg.Type)
+				s.log.Printf("Unknown message type: %s", string(message))
 				continue
 			}
 
