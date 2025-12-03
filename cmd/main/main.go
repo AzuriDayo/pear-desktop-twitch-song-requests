@@ -120,7 +120,10 @@ func (a *App) Run() error {
 
 	// Middleware
 	e.Use(middleware.Recover())
-	e.StaticFS("/", echo.MustSubFS(staticControlPanelFS, "build"))
+	e.Use(middleware.StaticWithConfig(middleware.StaticConfig{
+		Filesystem: http.FS(echo.MustSubFS(staticControlPanelFS, "build")),
+		HTML5:      true,
+	}))
 
 	apiV1 := e.Group("/api/v1")
 	apiV1.POST("/twitch-oauth", a.handleTwitchOAuth)
