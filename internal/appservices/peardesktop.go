@@ -15,14 +15,28 @@ import (
 
 // SongInfo represents detailed song information from Pear Desktop websocket
 type SongInfo struct {
-	Title          string `json:"title"`
-	Artist         string `json:"artist"`
-	URL            string `json:"url"`
-	SongDuration   int    `json:"songDuration"`
-	ImageSrc       string `json:"imageSrc"`
-	ElapsedSeconds int    `json:"elapsedSeconds"`
-	IsPaused       bool   `json:"isPaused"`
-	VideoID        string `json:"videoId"`
+	Title            string    `json:"title"`
+	AlternativeTitle string    `json:"alternativeTitle,omitempty"`
+	Artist           string    `json:"artist"`
+	ArtistURL        string    `json:"artistUrl,omitempty"`
+	Views            int       `json:"views,omitempty"`
+	UploadDate       string    `json:"uploadDate,omitempty"`
+	URL              string    `json:"url"`
+	SongDuration     int       `json:"songDuration"`
+	ImageSrc         string    `json:"imageSrc"`
+	Image            ImageInfo `json:"image,omitempty"`
+	ElapsedSeconds   int       `json:"elapsedSeconds"`
+	IsPaused         bool      `json:"isPaused"`
+	Album            string    `json:"album,omitempty"`
+	VideoID          string    `json:"videoId,omitempty"`
+	PlaylistID       string    `json:"playlistId,omitempty"`
+	MediaType        string    `json:"mediaType,omitempty"`
+	Tags             []string  `json:"tags,omitempty"`
+}
+
+// ImageInfo represents image information
+type ImageInfo struct {
+	IsMacTemplateImage bool `json:"isMacTemplateImage"`
 }
 
 // PositionChangedMessage represents a position update from the websocket
@@ -38,17 +52,29 @@ type VideoChangedMessage struct {
 	Position int      `json:"position"`
 }
 
+// PlayerInfoMessage represents a PLAYER_INFO message from Pear Desktop
+type PlayerInfoMessage struct {
+	Type      string   `json:"type"` // "PLAYER_INFO"
+	Song      SongInfo `json:"song"`
+	IsPlaying bool     `json:"isPlaying"`
+	Muted     bool     `json:"muted"`
+	Position  int      `json:"position"`
+	Volume    int      `json:"volume"`
+	Repeat    string   `json:"repeat"`
+	Shuffle   bool     `json:"shuffle"`
+}
+
 // WebSocketMessage represents any websocket message from Pear Desktop
 type WebSocketMessage struct {
 	Type      string   `json:"type"`
 	Position  int      `json:"position,omitempty"`
-	IsPlaying *bool    `json:"isPlaying,omitempty"`
+	IsPlaying bool     `json:"isPlaying"`
 	Song      SongInfo `json:"song"`
 }
 
 // WebSocketStateUpdate represents a music player state update from the websocket
 type WebSocketStateUpdate struct {
-	IsPlaying      bool      `json:"isPlaying"`
+	IsPlaying      *bool      `json:"isPlaying"`
 	CurrentSong    string    `json:"currentSong,omitempty"`
 	Artist         string    `json:"artist,omitempty"`
 	URL            string    `json:"url,omitempty"`
@@ -136,42 +162,83 @@ func (s *PearDesktopService) handleMessages() {
 				continue
 			}
 
-			// Parse the message to determine its type
-			var wsMsg WebSocketMessage
-			if err := json.Unmarshal(message, &wsMsg); err != nil {
-				s.log.Printf("Failed to unmarshal websocket message: %v", err)
+			// First, determine the message type by parsing just the type field
+			var typeCheck struct {
+				Type string `json:"type"`
+			}
+			if err := json.Unmarshal(message, &typeCheck); err != nil {
+				s.log.Printf("Failed to unmarshal message type: %v", err)
 				continue
 			}
+			s.log.Println(string(message))
 
 			// Create state update based on message type
 			var update WebSocketStateUpdate
 			update.Timestamp = time.Now()
 
-			switch wsMsg.Type {
+			switch typeCheck.Type {
+			case "PLAYER_INFO":
+				var playerMsg PlayerInfoMessage
+				if err := json.Unmarshal(message, &playerMsg); err != nil {
+					s.log.Printf("Failed to unmarshal PLAYER_INFO message: %v", err)
+					continue
+				}
+				s.log.Println("Received PLAYER_INFO:", string(message))
+
+				// Handle PLAYER_INFO message
+				if playerMsg.Song.Title != "" {
+					update.CurrentSong = playerMsg.Song.Title
+					update.Artist = playerMsg.Song.Artist
+					update.URL = playerMsg.Song.URL
+					update.SongDuration = playerMsg.Song.SongDuration
+					update.ImageSrc = playerMsg.Song.ImageSrc
+					update.ElapsedSeconds = playerMsg.Song.ElapsedSeconds
+					update.IsPlaying = &playerMsg.IsPlaying
+
+					s.log.Printf("Player info - Title: %s, Artist: %s, Duration: %ds, Position: %ds, Playing: %t",
+						playerMsg.Song.Title, playerMsg.Song.Artist, playerMsg.Song.SongDuration, playerMsg.Song.ElapsedSeconds, playerMsg.IsPlaying)
+				}
+
 			case "POSITION_CHANGED":
+				var posMsg PositionChangedMessage
+				if err := json.Unmarshal(message, &posMsg); err != nil {
+					s.log.Printf("Failed to unmarshal POSITION_CHANGED message: %v", err)
+					continue
+				}
 				// Position changed - update elapsed seconds
-				update.ElapsedSeconds = wsMsg.Position
-			case "PLAYER_STATE_CHANGED":
-				update.IsPlaying = *wsMsg.IsPlaying
-				update.ElapsedSeconds = wsMsg.Position
+				update.ElapsedSeconds = posMsg.Position
 
-			case "VIDEO_CHANGED":
-				// Video changed - extract song information
-				if wsMsg.Song.Title != "" {
-					update.CurrentSong = wsMsg.Song.Title
-					update.Artist = wsMsg.Song.Artist
-					update.URL = wsMsg.Song.URL
-					update.SongDuration = wsMsg.Song.SongDuration
-					update.ImageSrc = wsMsg.Song.ImageSrc
+			case "PLAYER_STATE_CHANGED", "VIDEO_CHANGED":
+				var wsMsg WebSocketMessage
+				if err := json.Unmarshal(message, &wsMsg); err != nil {
+					s.log.Printf("Failed to unmarshal websocket message: %v", err)
+					continue
+				}
+				s.log.Println("Received", wsMsg.Type, ":", string(message))
+
+				switch wsMsg.Type {
+				case "PLAYER_STATE_CHANGED":
+					update.IsPlaying = &wsMsg.IsPlaying
 					update.ElapsedSeconds = wsMsg.Position
-					update.IsPlaying = !wsMsg.Song.IsPaused
+				case "VIDEO_CHANGED":
+					// Video changed - extract song information
+					if wsMsg.Song.Title != "" {
+						update.CurrentSong = wsMsg.Song.Title
+						update.Artist = wsMsg.Song.Artist
+						update.URL = wsMsg.Song.URL
+						update.SongDuration = wsMsg.Song.SongDuration
+						update.ImageSrc = wsMsg.Song.ImageSrc
+						update.ElapsedSeconds = wsMsg.Position
+						b := !wsMsg.Song.IsPaused
+						update.IsPlaying = &b
 
-					s.log.Printf("Video changed - Title: %s, Artist: %s, Duration: %d",
-						wsMsg.Song.Title, wsMsg.Song.Artist, wsMsg.Song.SongDuration)
+						s.log.Printf("Video changed - Title: %s, Artist: %s, Duration: %d",
+							wsMsg.Song.Title, wsMsg.Song.Artist, wsMsg.Song.SongDuration)
+					}
 				}
 
 			default:
-				s.log.Printf("Unknown message type: %s", string(message))
+				s.log.Printf("Unknown message type: %s", typeCheck.Type)
 				continue
 			}
 

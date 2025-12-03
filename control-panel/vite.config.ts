@@ -8,10 +8,23 @@ export default defineConfig({
 		open: true,
 		proxy: {
 			"/api": {
-				target: "http://" + (process.env.HOST || "localhost") + ":" + (process.env.PORT || "3999"),
+				target:
+					"http://" +
+					(process.env.HOST || "localhost") +
+					":" +
+					(process.env.PORT || "3999"),
 				changeOrigin: true,
 				secure: false,
 			},
+			"/api/v1/music/ws": {
+				target:
+					"ws://" +
+					(process.env.HOST || "localhost") +
+					":" +
+					(process.env.PORT || "3999"),
+					ws: true,
+					rewriteWsOrigin: true,
+			}
 		},
 	},
 	build: {

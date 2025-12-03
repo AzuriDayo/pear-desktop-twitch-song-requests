@@ -42,7 +42,7 @@ async function apiRequest<T>(
 	}
 }
 
-// Health check for Pear Desktop service
+// Health check for music service
 export async function checkServiceHealth(): Promise<boolean> {
 	try {
 		// The backend should have a health endpoint or we can use the music state endpoint as health check
@@ -73,4 +73,55 @@ export async function setMusicPlayerState(
 		method: "POST",
 		body: JSON.stringify(state),
 	});
+}
+
+// WebSocket connection for real-time updates
+export function connectMusicWebSocket(
+	onMessage: (data: MusicPlayerState) => void,
+	onError?: (error: Event) => void,
+	onClose?: () => void,
+): WebSocket | null {
+	try {
+		const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+		const wsUrl = `${protocol}//${window.location.host}/api/v1/music/ws`;
+
+		const ws = new WebSocket(wsUrl);
+
+		ws.onopen = () => {
+			console.log("WebSocket connected for music updates");
+		};
+
+		ws.onmessage = (event) => {
+			try {
+				const data = JSON.parse(event.data);
+
+				// Check if this is a connection status message
+				if (data.frontend_connected !== undefined && data.pear_desktop_connected !== undefined) {
+					// This is handled by the component directly - don't call onMessage
+					console.log("Received connection status update:", data);
+				} else {
+					// This is a music state update
+					const musicData: MusicPlayerState = data;
+					onMessage(musicData);
+				}
+			} catch (err) {
+				console.error("Failed to parse WebSocket message:", err);
+			}
+		};
+
+		ws.onerror = (error) => {
+			console.error("WebSocket error:", error);
+			if (onError) onError(error);
+		};
+
+		ws.onclose = () => {
+			console.log("WebSocket connection closed");
+			if (onClose) onClose();
+		};
+
+		return ws;
+	} catch (err) {
+		console.error("Failed to create WebSocket connection:", err);
+		return null;
+	}
 }

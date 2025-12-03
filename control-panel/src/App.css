@@ -40,3 +40,371 @@
 .read-the-docs {
 	color: #888;
 }
+
+/* Fancy Navbar Styles */
+.fancy-navbar {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+	border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+	backdrop-filter: blur(10px);
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.fancy-navbar-brand {
+	color: white !important;
+	font-weight: bold;
+	font-size: 1.25rem;
+	margin-right: 2rem !important;
+	align-items: center !important;
+	display: flex !important;
+	line-height: 1;
+}
+
+.fancy-brand-icon {
+	width: 32px;
+	height: 32px;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.2);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 18px;
+	font-weight: bold;
+	margin-right: 8px;
+	flex-shrink: 0;
+}
+
+.fancy-nav-link {
+	color: white !important;
+	margin: 0 4px;
+	padding: 8px 16px !important;
+	border-radius: 50px !important;
+	transition: all 0.3s ease;
+	text-decoration: none;
+	font-weight: 500;
+}
+
+.fancy-nav-link:hover {
+	background: rgba(255, 255, 255, 0.1);
+	transform: translateY(-1px);
+	text-decoration: none;
+	color: white !important;
+}
+
+.fancy-nav-link.active {
+	background: rgba(255, 255, 255, 0.2) !important;
+	font-weight: 600 !important;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.fancy-navbar-toggler {
+	border: none !important;
+	background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.fancy-navbar-toggler:focus {
+	box-shadow: none !important;
+}
+
+.fancy-beta-badge {
+	margin-left: 8px;
+}
+
+/* Music Player Card Styling */
+.music-player-card {
+	transition: all 0.3s ease !important;
+	position: relative !important;
+	overflow: hidden !important;
+}
+
+.music-player-card:hover {
+	transform: translateY(-1px) !important;
+	box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2) !important;
+}
+
+.music-player-card .card-header {
+	padding: 1rem 1.25rem !important;
+	font-weight: 600 !important;
+	font-size: 1.1rem !important;
+	background: rgba(255, 255, 255, 0.05) !important;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+	border-radius: 12px 12px 12px 12px !important;
+}
+
+.music-player-card .card-body {
+	padding: 1.25rem !important;
+	border-radius: 0 0 12px 12px !important;
+}
+
+/* Music Player Content Styling */
+.music-info-display {
+	background: rgba(255, 255, 255, 0.05) !important;
+	border-radius: 8px !important;
+	padding: 1rem !important;
+	border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.music-info-display .album-art {
+	border-radius: 8px !important;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+	transition: transform 0.2s ease !important;
+}
+
+.music-info-display .album-art:hover {
+	transform: scale(1.05) !important;
+}
+
+.music-info-display .song-details {
+	margin-left: 1rem !important;
+}
+
+.music-info-display .song-title {
+	font-size: 1.2rem !important;
+	font-weight: 600 !important;
+	color: rgba(255, 255, 255, 0.95) !important;
+	margin-bottom: 0.25rem !important;
+}
+
+.music-info-display .song-artist {
+	font-size: 1rem !important;
+	color: rgba(255, 255, 255, 0.8) !important;
+	margin-bottom: 0.5rem !important;
+}
+
+.music-info-display .song-meta {
+	font-size: 0.9rem !important;
+	color: rgba(255, 255, 255, 0.7) !important;
+	line-height: 1.4 !important;
+}
+
+.music-info-display .playback-status {
+	font-size: 0.95rem !important;
+	font-weight: 500 !important;
+	color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.music-info-display .status-indicator.playing {
+	color: #4ade80 !important;
+	font-weight: 600 !important;
+}
+
+.music-info-display .status-indicator.paused {
+	color: rgba(255, 255, 255, 0.6) !important;
+	font-weight: 500 !important;
+}
+
+.music-info-display .progress-info,
+.music-info-display .volume-info {
+	font-size: 0.85rem !important;
+	color: rgba(255, 255, 255, 0.6) !important;
+	margin-bottom: 0.25rem !important;
+}
+
+.music-info-display .clickable {
+	cursor: pointer !important;
+	transition: all 0.2s ease !important;
+	user-select: none !important;
+}
+
+.music-info-display .clickable:hover {
+	opacity: 0.8 !important;
+	transform: translateY(-1px) !important;
+}
+
+.music-info-display .song-title.clickable:hover {
+	text-decoration: underline !important;
+}
+
+/* Enhanced Error Message Styling */
+.error-alert {
+	background: transparent !important;
+	border: 1px solid rgba(239, 68, 68, 0.3) !important;
+	border-left: 4px solid #ef4444 !important;
+	border-radius: 12px !important;
+	box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1) !important;
+	animation: error-glow 3s ease-in-out infinite !important;
+	position: relative !important;
+	overflow: hidden !important;
+}
+
+.error-alert::before {
+	content: '⚠️';
+	position: absolute;
+	left: 1rem;
+	top: 50%;
+	transform: translateY(-50%);
+	font-size: 1.1rem;
+	opacity: 0.8;
+}
+
+.error-alert::after {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: -100%;
+	width: 100%;
+	height: 100%;
+	background: linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.15), transparent);
+	animation: error-shimmer 4s ease-in-out infinite;
+	opacity: 0.6;
+}
+
+.error-alert .alert-text {
+	margin-left: 2.5rem !important;
+	font-weight: 500 !important;
+	color: rgba(239, 68, 68, 0.9) !important;
+	font-size: 0.9rem !important;
+	line-height: 1.5 !important;
+	text-shadow: none !important;
+}
+
+@keyframes error-glow {
+	0%, 100% {
+		box-shadow: 0 8px 25px rgba(239, 68, 68, 0.15);
+	}
+	50% {
+		box-shadow: 0 12px 35px rgba(239, 68, 68, 0.25);
+	}
+}
+
+@keyframes error-shimmer {
+	0% {
+		left: -100%;
+	}
+	100% {
+		left: 100%;
+	}
+}
+
+/* Fancy Connection Status Styling */
+.connection-status {
+	display: flex !important;
+	align-items: center !important;
+	gap: 0.5rem !important;
+	padding: 0.25rem 0.75rem !important;
+	border-radius: 20px !important;
+	background: rgba(255, 255, 255, 0.1) !important;
+	border: 1px solid rgba(255, 255, 255, 0.2) !important;
+	transition: all 0.3s ease !important;
+	font-size: 0.85rem !important;
+	font-weight: 500 !important;
+}
+
+.connection-status .status-icon {
+	font-size: 1rem !important;
+	line-height: 1 !important;
+}
+
+.connection-status .status-text {
+	font-size: 0.8rem !important;
+	white-space: nowrap !important;
+}
+
+/* Pulse animation for connecting/reconnecting states */
+@keyframes pulse-glow {
+	0%, 100% {
+		box-shadow: 0 0 5px rgba(255, 193, 7, 0.5);
+		transform: scale(1);
+	}
+	50% {
+		box-shadow: 0 0 20px rgba(255, 193, 7, 0.8);
+		transform: scale(1.02);
+	}
+}
+
+.connection-status.pulse {
+	animation: pulse-glow 2s ease-in-out infinite !important;
+}
+
+/* Status-specific styling */
+.connection-status .text-success {
+	color: #4ade80 !important;
+}
+
+.connection-status .text-warning {
+	color: #fbbf24 !important;
+}
+
+.connection-status .text-danger {
+	color: #f87171 !important;
+}
+
+/* Rounded Edge Theme */
+.card {
+	border-radius: 12px !important;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.alert {
+	border-radius: 8px !important;
+	border: none !important;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+.btn {
+	border-radius: 8px !important;
+	font-weight: 500 !important;
+	transition: all 0.2s ease !important;
+}
+
+.btn:hover {
+	transform: translateY(-1px) !important;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.form-control {
+	border-radius: 8px !important;
+	border: 1px solid #dee2e6 !important;
+	transition: all 0.2s ease !important;
+}
+
+.form-control:focus {
+	border-color: #667eea !important;
+	box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25) !important;
+	border-radius: 8px !important;
+}
+
+.badge {
+	border-radius: 12px !important;
+	font-weight: 500 !important;
+}
+
+.modal-content {
+	border-radius: 12px !important;
+	border: none !important;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2) !important;
+}
+
+.dropdown-menu {
+	border-radius: 8px !important;
+	border: none !important;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+	margin-top: 4px !important;
+}
+
+.input-group {
+	border-radius: 8px !important;
+	overflow: hidden !important;
+}
+
+.input-group-text {
+	border-radius: 0 !important;
+	background: #f8f9fa !important;
+	border-color: #dee2e6 !important;
+}
+
+/* Container styling for rounded theme */
+.container {
+	border-radius: 12px !important;
+	padding: 2rem !important;
+	margin: 1rem auto !important;
+}
+
+/* Container spacing adjustments for rounded theme */
+.py-4 {
+	padding-top: 2rem !important;
+	padding-bottom: 2rem !important;
+}
+
+.mb-3, .mb-4 {
+	margin-bottom: 1.5rem !important;
+}
