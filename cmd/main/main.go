@@ -4,7 +4,6 @@ import (
 	"context"
 	"embed"
 	"encoding/json"
-	"io"
 	"log"
 	"net/http"
 	"os/exec"
@@ -14,6 +13,8 @@ import (
 	"time"
 
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/appservices"
+	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/data"
+	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/databaseconn"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/helpers"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/staticservices"
 	"github.com/coder/websocket"
@@ -21,6 +22,85 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
+
+// getTwitchUserInfo fetches user information using the access token
+func (a *App) getTwitchUserInfo(tokenResp *TwitchTokenResponse) error {
+	req, err := http.NewRequest("GET", "https://api.twitch.tv/helix/users", nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+tokenResp.AccessToken)
+	req.Header.Set("Client-Id", data.GetTwitchClientID())
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return echo.NewHTTPError(resp.StatusCode, "Failed to get user info")
+	}
+
+	var userResp struct {
+		Data []struct {
+			ID    string `json:"id"`
+			Login string `json:"login"`
+		} `json:"data"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&userResp); err != nil {
+		return err
+	}
+
+	if len(userResp.Data) > 0 {
+		tokenResp.UserID = userResp.Data[0].ID
+		tokenResp.Login = userResp.Data[0].Login
+	}
+
+	return nil
+}
+
+// saveOAuthTokens stores the OAuth tokens in the SQLite database
+func (a *App) saveOAuthTokens(tokenResp *TwitchTokenResponse) error {
+	db, err := databaseconn.NewDBConnection()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	now := time.Now().UTC()
+	expiryTime := now.Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
+
+	log.Printf("Token expiry calculation: now=%s (UTC), expires_in=%d seconds, expiry_time=%s (UTC)",
+		now.Format("2006/01/02 15:04:05"),
+		tokenResp.ExpiresIn,
+		expiryTime.Format("2006/01/02 15:04:05"))
+
+	// Store tokens in settings table
+	tokens := map[string]string{
+		"twitch_access_token": tokenResp.AccessToken,
+		"twitch_token_expires": expiryTime.Format(time.RFC3339),
+		"twitch_user_id":       tokenResp.UserID,
+		"twitch_login":         tokenResp.Login,
+	}
+
+	log.Printf("Calculated token expiry: %s (ExpiresIn: %d seconds)", expiryTime.Format(time.RFC3339), tokenResp.ExpiresIn)
+
+	for key, value := range tokens {
+		_, err = db.Exec(`
+			INSERT OR REPLACE INTO settings (key, value, updated_at)
+			VALUES (?, ?, ?)`,
+			key, value, now)
+		if err != nil {
+			return err
+		}
+	}
+
+	log.Printf("Stored Twitch OAuth tokens for user: %s", tokenResp.Login)
+	return nil
+}
 
 func main() {
 	helpers.PreflightTest()
@@ -49,6 +129,14 @@ type App struct {
 type ConnectionStatus struct {
 	FrontendConnected    bool `json:"frontend_connected"`
 	PearDesktopConnected bool `json:"pear_desktop_connected"`
+}
+
+type TwitchTokenResponse struct {
+	AccessToken string `json:"access_token"`
+	ExpiresIn   int    `json:"expires_in"`
+	TokenType   string `json:"token_type"`
+	Login       string `json:"login,omitempty"`
+	UserID      string `json:"user_id,omitempty"`
 }
 
 func NewApp() *App {
@@ -128,6 +216,7 @@ func (a *App) Run() error {
 
 	apiV1 := e.Group("/api/v1")
 	apiV1.POST("/twitch-oauth", a.handleTwitchOAuth)
+	apiV1.GET("/twitch/status", a.handleTwitchStatus)
 	apiV1.GET("/music/state", a.handleGetMusicState)
 	apiV1.POST("/music/state", a.handleSetMusicState)
 	apiV1.GET("/music/ws", a.handleWebSocket)
@@ -161,19 +250,109 @@ func (a *App) Run() error {
 }
 
 func (a *App) handleTwitchOAuth(c echo.Context) error {
-	// auth data in url hash string params as get request
-	body := c.Request().Body
-	rawBodyData, err := io.ReadAll(body)
-	if err != nil {
-		return err
+	// Parse the OAuth token from request body (implicit grant flow)
+	var req struct {
+		AccessToken string `json:"access_token"`
+		TokenType   string `json:"token_type"`
+		ExpiresIn   int    `json:"expires_in"`
 	}
-	defer body.Close()
+	if err := c.Bind(&req); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
+	}
 
-	authData := struct {
-		Something string
-	}{}
-	err = json.Unmarshal(rawBodyData, &authData)
-	return echo.NewHTTPError(http.StatusTeapot, "under construction", err)
+	if req.AccessToken == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Access token is required")
+	}
+
+	// Create token response from received data
+	tokenResp := &TwitchTokenResponse{
+		AccessToken: req.AccessToken,
+		TokenType:   req.TokenType,
+		ExpiresIn:   req.ExpiresIn,
+	}
+
+	log.Printf("Received OAuth token - ExpiresIn: %d seconds, TokenType: %s", req.ExpiresIn, req.TokenType)
+
+	// Get user info using the access token
+	if err := a.getTwitchUserInfo(tokenResp); err != nil {
+		log.Printf("Failed to get user info: %v", err)
+		// For implicit grant, user info is crucial, return error if we can't get it
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to get user information from Twitch")
+	}
+
+	// Store the token in the database
+	if err := a.saveOAuthTokens(tokenResp); err != nil {
+		log.Printf("Failed to save OAuth tokens: %v", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to save authentication tokens")
+	}
+
+	log.Printf("Successfully stored Twitch OAuth token for user: %s", tokenResp.Login)
+	return c.JSON(http.StatusOK, map[string]string{
+		"message": "Successfully authenticated with Twitch",
+		"login":   tokenResp.Login,
+	})
+}
+
+type TwitchStatusResponse struct {
+	Authenticated bool   `json:"authenticated"`
+	Login         string `json:"login,omitempty"`
+	UserID        string `json:"user_id,omitempty"`
+	ExpiresAt     string `json:"expires_at,omitempty"`
+	Expired       bool   `json:"expired,omitempty"`
+}
+
+// handleTwitchStatus returns the current Twitch authentication status
+func (a *App) handleTwitchStatus(c echo.Context) error {
+	db, err := databaseconn.NewDBConnection()
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Database connection failed")
+	}
+	defer db.Close()
+
+	var accessToken, expiresAt, userID, login string
+
+	// Query all Twitch auth settings
+	rows, err := db.Query(`
+		SELECT key, value FROM settings
+		WHERE key IN ('twitch_access_token', 'twitch_token_expires', 'twitch_user_id', 'twitch_login')
+	`)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to query Twitch settings")
+	}
+	defer rows.Close()
+
+	settings := make(map[string]string)
+	for rows.Next() {
+		var key, value string
+		if err := rows.Scan(&key, &value); err != nil {
+			continue
+		}
+		settings[key] = value
+	}
+
+	accessToken = settings["twitch_access_token"]
+	expiresAt = settings["twitch_token_expires"]
+	userID = settings["twitch_user_id"]
+	login = settings["twitch_login"]
+
+	authenticated := accessToken != "" && login != ""
+	expired := false
+
+	if authenticated && expiresAt != "" {
+		if expiryTime, err := time.Parse(time.RFC3339, expiresAt); err == nil {
+			expired = time.Now().After(expiryTime)
+		}
+	}
+
+	response := TwitchStatusResponse{
+		Authenticated: authenticated && !expired,
+		Login:         login,
+		UserID:        userID,
+		ExpiresAt:     expiresAt,
+		Expired:       expired,
+	}
+
+	return c.JSON(http.StatusOK, response)
 }
 
 func (a *App) handleGetMusicState(c echo.Context) error {

@@ -1,11 +1,21 @@
 import { useEffect, useState } from "react";
 import { Container, Row, Col, Card, Alert } from "react-bootstrap";
+import { getTwitchStatus } from "../app/api";
+
+type TwitchStatus = {
+	authenticated: boolean;
+	login: string;
+	user_id: string;
+	expires_at: string;
+	expired: boolean;
+};
 
 export function Connect() {
 	const [params, setParams] = useState<URLSearchParams>();
-	const [oauthSuccess, setOauthSuccess] = useState(false);
+	const [twitchStatus, setTwitchStatus] = useState<TwitchStatus | null>(null);
+	const [loading, setLoading] = useState(true);
 
-	// on page load, set the oauth params
+	// on page load, set the oauth params and fetch twitch status
 	useEffect(() => {
 		const params = new URLSearchParams();
 		params.append(
@@ -14,9 +24,9 @@ export function Connect() {
 		);
 		params.append(
 			"redirect_uri",
-			"http://" + window.location.host + "/oauth/twitch-connect",
+			`${window.location.protocol}//${window.location.host}/oauth/twitch-connect`,
 		);
-		params.append("response_type", "code");
+		params.append("response_type", "token");
 		params.append(
 			"scope",
 			[
@@ -34,14 +44,19 @@ export function Connect() {
 		);
 		setParams(params);
 
-		// Check if we have OAuth code in URL (after redirect)
-		const urlParams = new URLSearchParams(window.location.search);
-		const code = urlParams.get("code");
-		if (code) {
-			setOauthSuccess(true);
-			// In a real app, you'd send this code to the backend
-			console.log("OAuth code received:", code);
-		}
+		// Fetch current Twitch authentication status
+		getTwitchStatus()
+			.then((response) => {
+				if (response.data) {
+					setTwitchStatus(response.data);
+				}
+			})
+			.catch((error) => {
+				console.error("Failed to fetch Twitch status:", error);
+			})
+			.finally(() => {
+				setLoading(false);
+			});
 	}, []);
 
 	return (
@@ -50,27 +65,54 @@ export function Connect() {
 				<Col>
 					<h1 className="mb-4">Connect with Twitch</h1>
 
-					{oauthSuccess && (
-						<Alert variant="success" className="mb-4">
-							<strong>Twitch OAuth successful!</strong> You are now connected to
-							Twitch.
-						</Alert>
-					)}
-
 					<Card className="mb-4">
 						<Card.Header>
 							<h5 className="mb-0">Twitch Integration</h5>
 						</Card.Header>
 						<Card.Body>
-							<p>
-								Connect your Twitch account to enable song requests from chat.
-							</p>
-							<a
-								href={`https://id.twitch.tv/oauth2/authorize?${params}`}
-								className="btn btn-primary"
-							>
-								Connect with Twitch
-							</a>
+							{loading ? (
+								<p>Loading authentication status...</p>
+							) : twitchStatus?.authenticated ? (
+								<>
+									<Alert variant="success" className="mb-3">
+										<strong>✓ Connected to Twitch</strong>
+									</Alert>
+									<div className="mb-3">
+										<p className="mb-1">
+											<strong>Username:</strong> {twitchStatus.login}
+										</p>
+										{twitchStatus.expires_at && (
+											<p className="mb-1">
+												<strong>Token Expires:</strong>{" "}
+												{new Date(twitchStatus.expires_at).toLocaleString()}
+											</p>
+										)}
+									</div>
+									{twitchStatus.expired && (
+										<Alert variant="warning" className="mb-3">
+											Your token has expired. Please refresh your authentication.
+										</Alert>
+									)}
+									<a
+										href={`https://id.twitch.tv/oauth2/authorize?${params}`}
+										className="btn btn-warning"
+									>
+										Refresh Token
+									</a>
+								</>
+							) : (
+								<>
+									<p>
+										Connect your Twitch account to enable song requests from chat.
+									</p>
+									<a
+										href={`https://id.twitch.tv/oauth2/authorize?${params}`}
+										className="btn btn-primary"
+									>
+										Connect with Twitch
+									</a>
+								</>
+							)}
 						</Card.Body>
 					</Card>
 				</Col>

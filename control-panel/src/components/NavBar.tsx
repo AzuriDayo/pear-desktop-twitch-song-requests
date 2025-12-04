@@ -1,4 +1,4 @@
-import { Navbar, Nav, Container, Badge } from "react-bootstrap";
+import { Navbar, Nav, Container } from "react-bootstrap";
 import { Link, useLocation } from "react-router-dom";
 
 export function NavBar() {
@@ -30,16 +30,6 @@ export function NavBar() {
 						<span className="d-flex align-items-center">
 							<span className="me-2">🔗</span>
 							Connect with Twitch
-							{location.pathname === "/connect" && (
-								<Badge
-									bg="light"
-									text="dark"
-									className="fancy-beta-badge"
-									pill
-								>
-									Beta
-								</Badge>
-							)}
 						</span>
 					</Nav.Link>
 				</Nav>

@@ -75,6 +75,35 @@ export async function setMusicPlayerState(
 	});
 }
 
+// Store OAuth token from implicit grant flow
+export async function storeOAuthToken(tokenData: {
+	access_token: string;
+	token_type: string;
+	expires_in: number;
+}): Promise<ApiResponse<any>> {
+	return apiRequest("/twitch-oauth", {
+		method: "POST",
+		body: JSON.stringify(tokenData),
+	});
+}
+
+// Get current Twitch authentication status
+export async function getTwitchStatus(): Promise<ApiResponse<{
+	authenticated: boolean;
+	login: string;
+	user_id: string;
+	expires_at: string;
+	expired: boolean;
+}>> {
+	return apiRequest<{
+		authenticated: boolean;
+		login: string;
+		user_id: string;
+		expires_at: string;
+		expired: boolean;
+	}>("/twitch/status");
+}
+
 // WebSocket connection for real-time updates
 export function connectMusicWebSocket(
 	onMessage: (data: MusicPlayerState) => void,
