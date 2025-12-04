@@ -98,7 +98,7 @@ export function connectMusicWebSocket(
 				// Check if this is a connection status message
 				if (data.frontend_connected !== undefined && data.pear_desktop_connected !== undefined) {
 					// This is handled by the component directly - don't call onMessage
-					console.log("Received connection status update:", data);
+					// console.log("Received connection status update:", data);
 				} else {
 					// This is a music state update
 					const musicData: MusicPlayerState = data;

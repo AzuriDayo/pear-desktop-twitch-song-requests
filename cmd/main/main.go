@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os/exec"
 	"runtime"
+	"strconv"
 	"sync"
 	"time"
 
@@ -395,7 +396,7 @@ func (a *App) handleMusicPlayerUpdates() {
 				// For PLAYER_STATE_CHANGED, also update IsPlaying if it's different
 				if update.IsPlaying != nil && *update.IsPlaying != a.currentPlayerState.IsPlaying {
 					a.currentPlayerState.IsPlaying = *update.IsPlaying
-					log.Printf("Updated playing state: %t (from PLAYER_STATE_CHANGED)", update.IsPlaying)
+					log.Printf("Updated playing state: %s (from PLAYER_STATE_CHANGED)", strconv.FormatBool(*update.IsPlaying))
 				}
 				stateChanged = true
 			} else if update.IsPlaying != nil && *update.IsPlaying != a.currentPlayerState.IsPlaying {
@@ -407,10 +408,9 @@ func (a *App) handleMusicPlayerUpdates() {
 
 			// Broadcast update to frontend websocket clients
 			if stateChanged {
-				log.Printf("Broadcasting state update - Playing: %t, Song: %s", a.currentPlayerState.IsPlaying, a.currentPlayerState.CurrentSong)
 				select {
 				case a.broadcast <- *a.currentPlayerState:
-					log.Printf("State update broadcast successfully")
+					// log.Printf("State update broadcast successfully")
 				default:
 					log.Printf("Broadcast channel full, skipping update")
 				}

@@ -74,7 +74,7 @@ type WebSocketMessage struct {
 
 // WebSocketStateUpdate represents a music player state update from the websocket
 type WebSocketStateUpdate struct {
-	IsPlaying      *bool      `json:"isPlaying"`
+	IsPlaying      *bool     `json:"isPlaying"`
 	CurrentSong    string    `json:"currentSong,omitempty"`
 	Artist         string    `json:"artist,omitempty"`
 	URL            string    `json:"url,omitempty"`
@@ -170,7 +170,6 @@ func (s *PearDesktopService) handleMessages() {
 				s.log.Printf("Failed to unmarshal message type: %v", err)
 				continue
 			}
-			s.log.Println(string(message))
 
 			// Create state update based on message type
 			var update WebSocketStateUpdate
@@ -183,7 +182,7 @@ func (s *PearDesktopService) handleMessages() {
 					s.log.Printf("Failed to unmarshal PLAYER_INFO message: %v", err)
 					continue
 				}
-				s.log.Println("Received PLAYER_INFO:", string(message))
+				// s.log.Println("Received PLAYER_INFO:", string(message))
 
 				// Handle PLAYER_INFO message
 				if playerMsg.Song.Title != "" {
@@ -214,7 +213,7 @@ func (s *PearDesktopService) handleMessages() {
 					s.log.Printf("Failed to unmarshal websocket message: %v", err)
 					continue
 				}
-				s.log.Println("Received", wsMsg.Type, ":", string(message))
+				// s.log.Println("Received", wsMsg.Type, ":", string(message))
 
 				switch wsMsg.Type {
 				case "PLAYER_STATE_CHANGED":
