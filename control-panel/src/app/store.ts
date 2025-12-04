@@ -1,9 +1,11 @@
 import { configureStore } from "@reduxjs/toolkit";
-import counterReducer from "../features/musicplayer/musicPlayerSlice";
+import musicPlayerReducer from "../features/musicplayer/musicPlayerSlice";
+import websocketReducer from "../features/websocket/websocketSlice";
 
 const store = configureStore({
 	reducer: {
-		musicPlayer: counterReducer,
+		musicPlayer: musicPlayerReducer,
+		websocket: websocketReducer,
 	},
 });
 

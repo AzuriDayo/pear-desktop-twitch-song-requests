@@ -81,6 +81,7 @@ type WebSocketStateUpdate struct {
 	SongDuration   int       `json:"songDuration,omitempty"`
 	ImageSrc       string    `json:"imageSrc,omitempty"`
 	ElapsedSeconds int       `json:"elapsedSeconds,omitempty"`
+	VideoID        *string   `json:"videoId,omitempty"`
 	Timestamp      time.Time `json:"timestamp"`
 }
 
@@ -194,8 +195,13 @@ func (s *PearDesktopService) handleMessages() {
 					update.ElapsedSeconds = playerMsg.Song.ElapsedSeconds
 					update.IsPlaying = &playerMsg.IsPlaying
 
-					s.log.Printf("Player info - Title: %s, Artist: %s, Duration: %ds, Position: %ds, Playing: %t",
-						playerMsg.Song.Title, playerMsg.Song.Artist, playerMsg.Song.SongDuration, playerMsg.Song.ElapsedSeconds, playerMsg.IsPlaying)
+					// Add videoId if available
+					if playerMsg.Song.VideoID != "" {
+						update.VideoID = &playerMsg.Song.VideoID
+					}
+
+					s.log.Printf("Player info - Title: %s, Artist: %s, Duration: %ds, Position: %ds, Playing: %t, VideoID: %s",
+						playerMsg.Song.Title, playerMsg.Song.Artist, playerMsg.Song.SongDuration, playerMsg.Song.ElapsedSeconds, playerMsg.IsPlaying, playerMsg.Song.VideoID)
 				}
 
 			case "POSITION_CHANGED":

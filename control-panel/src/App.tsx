@@ -8,10 +8,10 @@ function App() {
 	return (
 		<>
 			<NavBar />
-			<Routes>
-				<Route path="/" element={<Home />} />
-				<Route path="/connect" element={<Connect />} />
-			</Routes>
+		<Routes>
+			<Route path="/" element={<Home />} />
+			<Route path="/connect" element={<Connect />} />
+		</Routes>
 		</>
 	);
 }

@@ -42,6 +42,7 @@ type MusicPlayerState struct {
 	ImageSrc       string `json:"imageSrc,omitempty"`
 	ElapsedSeconds int    `json:"elapsedSeconds,omitempty"`
 	Volume         int    `json:"volume,omitempty"`
+	VideoID        string `json:"videoId,omitempty"`
 }
 
 // PearDesktopService handles communication with the Pear Desktop background process

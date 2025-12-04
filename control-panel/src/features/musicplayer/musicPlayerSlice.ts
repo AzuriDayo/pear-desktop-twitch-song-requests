@@ -11,6 +11,7 @@ interface IMusicPlayerState {
 	imageSrc?: string;
 	elapsedSeconds?: number;
 	volume?: number;
+	videoId?: string;
 	serviceHealthy: boolean;
 	lastUpdated?: string;
 }
@@ -47,6 +48,7 @@ export const musicPlayerSlice = createSlice({
 				imageSrc?: string;
 				elapsedSeconds?: number;
 				volume?: number;
+				videoId?: string;
 			}>,
 		) => {
 			if (action.payload.isPlaying !== undefined) {
@@ -72,6 +74,9 @@ export const musicPlayerSlice = createSlice({
 			}
 			if (action.payload.volume !== undefined) {
 				state.volume = action.payload.volume;
+			}
+			if (action.payload.videoId !== undefined) {
+				state.videoId = action.payload.videoId;
 			}
 			state.lastUpdated = new Date().toISOString();
 		},
@@ -99,6 +104,7 @@ export const selectImageSrc = (state: RootState) => state.musicPlayer.imageSrc;
 export const selectElapsedSeconds = (state: RootState) =>
 	state.musicPlayer.elapsedSeconds;
 export const selectVolume = (state: RootState) => state.musicPlayer.volume;
+export const selectVideoId = (state: RootState) => state.musicPlayer.videoId;
 export const selectServiceHealth = (state: RootState) =>
 	state.musicPlayer.serviceHealthy;
 

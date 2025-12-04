@@ -388,6 +388,9 @@ func (a *App) handleMusicPlayerUpdates() {
 				a.currentPlayerState.SongDuration = update.SongDuration
 				a.currentPlayerState.ImageSrc = update.ImageSrc
 				a.currentPlayerState.ElapsedSeconds = update.ElapsedSeconds
+				if update.VideoID != nil {
+					a.currentPlayerState.VideoID = *update.VideoID
+				}
 				log.Printf("Updated song info: %s by %s (%ds)", update.CurrentSong, update.Artist, update.SongDuration)
 				stateChanged = true
 			} else if update.ElapsedSeconds >= 0 {
@@ -402,7 +405,7 @@ func (a *App) handleMusicPlayerUpdates() {
 			} else if update.IsPlaying != nil && *update.IsPlaying != a.currentPlayerState.IsPlaying {
 				// PLAYER_STATE_CHANGED message with only IsPlaying change
 				a.currentPlayerState.IsPlaying = *update.IsPlaying
-				log.Printf("Updated playing state only: %t", update.IsPlaying)
+				log.Printf("Updated playing state only: %t", *update.IsPlaying)
 				stateChanged = true
 			}
 
