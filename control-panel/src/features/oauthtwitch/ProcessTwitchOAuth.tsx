@@ -1,18 +1,11 @@
-import React, { useEffect, useState } from "react";
-import { useAppSelector, useAppDispatch } from "../../app/hooks";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, Link } from "react-router";
 
-export function OAuthTwitch() {
+export function ProcessTwitchOAuth() {
 	const navigate = useNavigate();
-	const [oAuthSuccessObj, setOAuthSuccessObj] = useState<{
-		access_token: string;
-		scope: string;
-		state?: string;
-		token_type: string;
-	} | null>(null);
+
 	const [errorObj, setErrorObj] = useState<{
-		errorMsg: string;
-		error_description: string;
+		error: string;
 	} | null>(null);
 
 	useEffect(() => {
@@ -26,8 +19,10 @@ export function OAuthTwitch() {
 				const queryParams = new URLSearchParams(window.location.search);
 				if (queryParams.has("error") && queryParams.has("error_description")) {
 					setErrorObj({
-						errorMsg: queryParams.get("error") ?? "",
-						error_description: queryParams.get("error_description") ?? "",
+						error:
+							(queryParams.get("error") ?? "") +
+							": " +
+							(queryParams.get("error_description") ?? ""),
 					});
 					return;
 				}
@@ -54,9 +49,40 @@ export function OAuthTwitch() {
 					if (hashParams.has("state")) {
 						obj.state = hashParams.get("state") ?? "";
 					}
-					setOAuthSuccessObj(obj);
+					fetch("/api/v1/twitch-oauth", {
+						body: JSON.stringify(obj),
+						method: "POST",
+					})
+						.then((response) => {
+							if (response.status === 200) {
+								navigate("/oauth/twitch-success");
+							} else {
+								response.text().then((v) => {
+									if (v.length > 0) {
+										try {
+											const j = JSON.parse(v);
+											setErrorObj(j);
+										} catch (e) {
+											console.error("failed parsing json from server response");
+										}
+									} else {
+										console.log("server response status only", response.status);
+										setErrorObj({
+											error: "Token invalid",
+										});
+									}
+								});
+							}
+						})
+						.catch((e) => {
+							console.log(e);
+							setErrorObj({
+								error: "big failure " + e,
+							});
+						});
 				}
 			} catch (e) {
+				console.error(e);
 				return;
 			}
 		} else {
@@ -66,12 +92,14 @@ export function OAuthTwitch() {
 
 	return (
 		<div>
-			{errorObj !== null ? (
-				<>{JSON.stringify(errorObj)}</>
-			) : oAuthSuccessObj !== null ? (
-				<>{JSON.stringify(oAuthSuccessObj)}</>
+			{errorObj ? (
+				<>
+					<h3>{errorObj.error}</h3>
+					<br />
+					<Link to={"/oauth/twitch-connect"}>Retry</Link>
+				</>
 			) : (
-				<>Working...</>
+				<h2>Working...</h2>
 			)}
 		</div>
 	);

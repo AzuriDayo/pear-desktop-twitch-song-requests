@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import "./App.css";
+import "./ConnectWithTwitchEntry.css";
 
-function App() {
+function ConnectWithTwitchEntry() {
 	const [params, setParams] = useState<URLSearchParams>();
 
 	// on page load, set the oauth params
@@ -14,7 +14,7 @@ function App() {
 		);
 		params.append(
 			"redirect_uri",
-			"http://" + window.location.host + "/oauth/twitch-connect",
+			"http://" + window.location.host + "/oauth/twitch",
 		);
 		params.append(
 			"scope",
@@ -41,4 +41,4 @@ function App() {
 	);
 }
 
-export default App;
+export default ConnectWithTwitchEntry;

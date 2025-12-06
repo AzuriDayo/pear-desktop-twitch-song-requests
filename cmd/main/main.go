@@ -1,15 +1,19 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"embed"
+	"fmt"
 	"log"
+	"os"
 	"os/exec"
 	"runtime"
 	"sync"
 	"time"
 
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/appservices"
+	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/data"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/helpers"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -28,7 +32,11 @@ type twitchData = struct {
 func main() {
 	helpers.PreflightTest()
 	app := NewApp()
-	log.Fatalln(app.Run())
+
+	log.Println(app.Run())
+	app.cancel()
+	fmt.Print("Press 'Enter' to continue...")
+	bufio.NewReader(os.Stdin).ReadBytes('\n')
 }
 
 type App struct {
@@ -44,9 +52,13 @@ type App struct {
 
 func NewApp() *App {
 	ctx, cancel := context.WithCancel(context.Background())
+	c, _ := helix.NewClient(&helix.Options{
+		ClientID: data.GetTwitchClientID(),
+	})
 	return &App{
 		ctx:    ctx,
 		cancel: cancel,
+		helix:  c,
 	}
 }
 
@@ -55,7 +67,10 @@ var staticControlPanelFS embed.FS
 
 func (a *App) Run() error {
 	// load sqlite
-	a.loadSqliteSettings()
+	err := a.loadSqliteSettings()
+	if err != nil {
+		return err
+	}
 
 	log.Println("App is running on port 3999...")
 	// Echo instance
@@ -67,7 +82,7 @@ func (a *App) Run() error {
 	e.StaticFS("/", echo.MustSubFS(staticControlPanelFS, "build"))
 
 	apiV1 := e.Group("/api/v1")
-	apiV1.POST("/twitch-oauth", a.handleTwitchOAuth)
+	apiV1.POST("/twitch-oauth", a.processTwitchOAuth)
 	apiV1.GET("/ws", a.handleAppWs)
 
 	var cmd string

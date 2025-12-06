@@ -9,7 +9,6 @@ import (
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/gen/model"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/data"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/databaseconn"
-	"github.com/nicklaw5/helix/v2"
 
 	. "github.com/azuridayo/pear-desktop-twitch-song-requests/gen/table"
 	. "github.com/go-jet/jet/v2/sqlite"
@@ -35,25 +34,13 @@ func (a *App) loadSqliteSettings() error {
 		}
 	}
 
-	c, err := helix.NewClient(&helix.Options{
-		ClientID: data.GetTwitchClientID(),
-	})
-	if err != nil {
-		return err
-	}
-
 	if twitchDataStruct.accessToken != "" {
-		isValid, response, err := c.ValidateToken(twitchDataStruct.accessToken)
+		isValid, response, err := a.helix.ValidateToken(twitchDataStruct.accessToken)
 		if err != nil {
 			// req error
 			return err
 		}
 		if response.StatusCode == http.StatusOK && isValid {
-			c.SetUserAccessToken(twitchDataStruct.accessToken)
-			twitchDataStruct.isAuthenticated = true
-
-			twitchDataStruct.userID = response.Data.UserID
-			twitchDataStruct.login = response.Data.Login
 			expiresIn := response.Data.ExpiresIn
 			strDate := response.Header.Get("Date")
 			t, err := time.Parse(data.TWITCH_SERVER_DATE_LAYOUT, strDate)
@@ -61,10 +48,13 @@ func (a *App) loadSqliteSettings() error {
 				return errors.New("Failed to validate server date time expiry, original error:\n" + err.Error())
 			}
 			t = t.Add(time.Duration(expiresIn) * time.Second)
+			a.helix.SetUserAccessToken(twitchDataStruct.accessToken)
 			twitchDataStruct.expiresDate = t
+			twitchDataStruct.isAuthenticated = true
+			twitchDataStruct.userID = response.Data.UserID
+			twitchDataStruct.login = response.Data.Login
 		}
 	}
-	a.helix = c
 	a.twitchDataStruct = twitchDataStruct
 
 	return nil
