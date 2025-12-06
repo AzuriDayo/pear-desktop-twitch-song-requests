@@ -34,10 +34,10 @@ type twitchData = struct {
 	expiresDate     time.Time
 }
 
-func (a *App) loadSqliteSettings() (*helix.Client, error) {
+func (a *App) loadSqliteSettings() error {
 	db, err := databaseconn.NewDBConnection()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	twitchDataStruct := twitchData{}
@@ -45,7 +45,7 @@ func (a *App) loadSqliteSettings() (*helix.Client, error) {
 	stmt := SELECT(Settings.Value).FROM(Settings).WHERE(Settings.Key.EQ(String(data.DB_KEY_TWITCH_ACCESS_TOKEN))).LIMIT(1)
 	err = stmt.QueryContext(a.ctx, db, &results)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	for _, result := range results {
@@ -58,14 +58,14 @@ func (a *App) loadSqliteSettings() (*helix.Client, error) {
 		ClientID: data.GetTwitchClientID(),
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if twitchDataStruct.accessToken != "" {
 		isValid, response, err := c.ValidateToken(twitchDataStruct.accessToken)
 		if err != nil {
 			// req error
-			return nil, err
+			return err
 		}
 		if response.StatusCode == http.StatusOK && isValid {
 			c.SetUserAccessToken(twitchDataStruct.accessToken)
@@ -77,16 +77,16 @@ func (a *App) loadSqliteSettings() (*helix.Client, error) {
 			strDate := response.Header.Get("Date")
 			t, err := time.Parse(data.TWITCH_SERVER_DATE_LAYOUT, strDate)
 			if err != nil {
-				return nil, errors.New("Failed to validate server date time expiry, original error:\n" + err.Error())
+				return errors.New("Failed to validate server date time expiry, original error:\n" + err.Error())
 			}
 			t = t.Add(time.Duration(expiresIn) * time.Second)
 			twitchDataStruct.expiresDate = t
 		}
 	}
-
+	a.helix = c
 	a.twitchDataStruct = twitchDataStruct
 
-	return c, nil
+	return nil
 }
 
 func main() {
@@ -97,7 +97,7 @@ func main() {
 
 type App struct {
 	twitchDataStruct twitchData
-	helix            helix.Client
+	helix            *helix.Client
 	twitchWSService  appservices.TwitchWS
 	ctx              context.Context
 	cancel           context.CancelFunc
