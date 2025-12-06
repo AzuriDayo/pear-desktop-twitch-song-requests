@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/nicklaw5/helix/v2"
 	"golang.org/x/net/websocket"
 )
 
@@ -26,23 +25,14 @@ func (a *App) handleAppWs(c echo.Context) error {
 		// Send initial info
 		// only login and expiry date
 		expiryDate := a.twitchDataStruct.expiresDate.Local().Format(time.DateTime)
-		streamOnline := false
-		if a.twitchDataStruct.login != "" {
-			resp, err := a.helix.GetStreams(&helix.StreamsParams{
-				UserLogins: []string{a.twitchDataStruct.login},
-			})
-			if err == nil && len(resp.Data.Streams) > 0 && resp.Data.Streams[0].ID != "" {
-				streamOnline = true
-			}
-		}
 
 		infoOnConnect, _ := json.Marshal(echo.Map{
 			"type":          "TWITCH_INFO",
 			"login":         a.twitchDataStruct.login,
 			"expiry_date":   expiryDate,
-			"stream_online": streamOnline,
+			"stream_online": a.streamOnline,
 		})
-		err := websocket.Message.Send(ws, infoOnConnect)
+		err := websocket.Message.Send(ws, string(infoOnConnect))
 		if err != nil {
 			// conn already closed
 			return

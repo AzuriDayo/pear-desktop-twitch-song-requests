@@ -44,6 +44,7 @@ type App struct {
 	twitchDataStruct     *twitchData
 	helix                *helix.Client
 	twitchWSService      *appservices.TwitchWS
+	streamOnline         bool
 	twitchWSIncomingMsgs chan []byte
 	ctx                  context.Context
 	cancel               context.CancelFunc
@@ -82,7 +83,7 @@ func (a *App) Run() error {
 	// Auto reconnect twitch ws
 	go func() {
 		for {
-			a.twitchWSService = appservices.NewTwitchWS(a.helix, &a.twitchDataStruct.userID, &a.twitchDataStruct.login, nil, nil, nil, songrequests.GetSubscriptions(), songrequests.SetSubscriptionHandlers)
+			a.twitchWSService = appservices.NewTwitchWS(a.helix, &a.twitchDataStruct.userID, &a.twitchDataStruct.login, nil, nil, nil, songrequests.GetSubscriptions(), a.SetSubscriptionHandlers)
 			if a.helix.GetUserAccessToken() != "" {
 				valid, _, _ := a.helix.ValidateToken(a.helix.GetUserAccessToken())
 				if valid {

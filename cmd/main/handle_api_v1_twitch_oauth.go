@@ -14,6 +14,7 @@ import (
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/databaseconn"
 	. "github.com/go-jet/jet/v2/sqlite"
 	"github.com/labstack/echo/v4"
+	"github.com/nicklaw5/helix/v2"
 )
 
 func (a *App) processTwitchOAuth(c echo.Context) error {
@@ -64,12 +65,6 @@ func (a *App) processTwitchOAuth(c echo.Context) error {
 			})
 		}
 		t = t.Add(time.Duration(expiresIn) * time.Second)
-		a.helix.SetUserAccessToken(authData.AccessToken)
-		a.twitchDataStruct.expiresDate = t
-		a.twitchDataStruct.isAuthenticated = true
-		a.twitchDataStruct.userID = response.Data.UserID
-		a.twitchDataStruct.login = response.Data.Login
-
 		db, err := databaseconn.NewDBConnection()
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, echo.Map{
@@ -79,6 +74,19 @@ func (a *App) processTwitchOAuth(c echo.Context) error {
 		defer func() {
 			db.Close()
 		}()
+		a.helix.SetUserAccessToken(authData.AccessToken)
+		a.twitchDataStruct.expiresDate = t
+		a.twitchDataStruct.isAuthenticated = true
+		a.twitchDataStruct.userID = response.Data.UserID
+		a.twitchDataStruct.login = response.Data.Login
+
+		resp, err := a.helix.GetStreams(&helix.StreamsParams{
+			UserLogins: []string{a.twitchDataStruct.login},
+		})
+		if err == nil && len(resp.Data.Streams) > 0 && resp.Data.Streams[0].ID != "" {
+			a.streamOnline = true
+		}
+
 		newToken := model.Settings{
 			Key:   data.DB_KEY_TWITCH_ACCESS_TOKEN,
 			Value: authData.AccessToken,

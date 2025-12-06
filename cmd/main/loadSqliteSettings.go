@@ -9,6 +9,7 @@ import (
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/gen/model"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/data"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/databaseconn"
+	"github.com/nicklaw5/helix/v2"
 
 	. "github.com/azuridayo/pear-desktop-twitch-song-requests/gen/table"
 	. "github.com/go-jet/jet/v2/sqlite"
@@ -53,6 +54,13 @@ func (a *App) loadSqliteSettings() error {
 			a.twitchDataStruct.isAuthenticated = true
 			a.twitchDataStruct.userID = response.Data.UserID
 			a.twitchDataStruct.login = response.Data.Login
+
+			resp, err := a.helix.GetStreams(&helix.StreamsParams{
+				UserLogins: []string{a.twitchDataStruct.login},
+			})
+			if err == nil && len(resp.Data.Streams) > 0 && resp.Data.Streams[0].ID != "" {
+				a.streamOnline = true
+			}
 		}
 	}
 

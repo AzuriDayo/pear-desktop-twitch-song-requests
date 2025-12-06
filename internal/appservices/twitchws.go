@@ -20,7 +20,7 @@ type TwitchWS struct {
 	client            *twitch.Client
 	log               *log.Logger
 	subs              []twitch.EventSubscription
-	setupHandlers     func(client *twitch.Client)
+	setupHandlers     func()
 }
 
 func (s *TwitchWS) StartCtx(ctx context.Context) error {
@@ -57,7 +57,7 @@ func (s *TwitchWS) StartCtx(ctx context.Context) error {
 	s.client.OnRevoke(func(message twitch.RevokeMessage) {
 		s.log.Printf("REVOKE: %v\n", message)
 	})
-	s.setupHandlers(s.client)
+	s.setupHandlers()
 
 	return s.client.ConnectWithContext(ctx)
 }
@@ -70,7 +70,7 @@ func (s *TwitchWS) Log() *log.Logger {
 	return s.log
 }
 
-func NewTwitchWS(hc *helix.Client, mainUserId *string, mainTwitchChannel *string, helixBot *helix.Client, botUserId *string, botTwitchChannel *string, subs []twitch.EventSubscription, setupHandlers func(client *twitch.Client)) *TwitchWS {
+func NewTwitchWS(hc *helix.Client, mainUserId *string, mainTwitchChannel *string, helixBot *helix.Client, botUserId *string, botTwitchChannel *string, subs []twitch.EventSubscription, setupHandlers func()) *TwitchWS {
 	s := &TwitchWS{
 		botTwitchChannel:  botTwitchChannel,
 		mainTwitchChannel: mainTwitchChannel,
