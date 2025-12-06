@@ -15,6 +15,7 @@ import (
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/appservices"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/data"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/helpers"
+	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/songrequests"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/nicklaw5/helix/v2"
@@ -40,14 +41,15 @@ func main() {
 }
 
 type App struct {
-	twitchDataStruct twitchData
-	helix            *helix.Client
-	twitchWSService  appservices.TwitchWS
-	ctx              context.Context
-	cancel           context.CancelFunc
-	clients          map[*websocket.Conn]struct{}
-	clientsMu        sync.RWMutex
-	clientsBroadcast chan string
+	twitchDataStruct     *twitchData
+	helix                *helix.Client
+	twitchWSService      *appservices.TwitchWS
+	twitchWSIncomingMsgs chan []byte
+	ctx                  context.Context
+	cancel               context.CancelFunc
+	clients              map[*websocket.Conn]struct{}
+	clientsMu            sync.RWMutex
+	clientsBroadcast     chan []byte
 }
 
 func NewApp() *App {
@@ -56,9 +58,13 @@ func NewApp() *App {
 		ClientID: data.GetTwitchClientID(),
 	})
 	return &App{
-		ctx:    ctx,
-		cancel: cancel,
-		helix:  c,
+		twitchDataStruct:     &twitchData{},
+		ctx:                  ctx,
+		cancel:               cancel,
+		helix:                c,
+		clientsBroadcast:     make(chan []byte),
+		twitchWSIncomingMsgs: make(chan []byte),
+		clientsMu:            sync.RWMutex{},
 	}
 }
 
@@ -71,6 +77,24 @@ func (a *App) Run() error {
 	if err != nil {
 		return err
 	}
+	go func() {
+		for {
+			a.twitchWSService = appservices.NewTwitchWS(a.helix, &a.twitchDataStruct.userID, &a.twitchDataStruct.login, nil, nil, nil, songrequests.GetSubscriptions(), songrequests.SetSubscriptionHandlers)
+			if a.helix.GetUserAccessToken() != "" {
+				valid, _, _ := a.helix.ValidateToken(a.helix.GetUserAccessToken())
+				if valid {
+					err := a.twitchWSService.StartCtx(a.ctx)
+					if err == nil {
+						// graceful shutdown
+						return
+					}
+					log.Println("Twitch WS disconnected, attempt to reconnect")
+				}
+				// always sleep 5s after token validation
+				time.Sleep(5 * time.Second)
+			}
+		}
+	}()
 
 	log.Println("App is running on port 3999...")
 	// Echo instance

@@ -23,7 +23,6 @@ func (a *App) loadSqliteSettings() error {
 		db.Close()
 	}()
 
-	twitchDataStruct := twitchData{}
 	results := []model.Settings{}
 	stmt := SELECT(Settings.Value).FROM(Settings).WHERE(Settings.Key.EQ(String(data.DB_KEY_TWITCH_ACCESS_TOKEN))).LIMIT(1)
 	err = stmt.QueryContext(a.ctx, db, &results)
@@ -33,12 +32,12 @@ func (a *App) loadSqliteSettings() error {
 
 	for _, result := range results {
 		if result.Key == data.DB_KEY_TWITCH_ACCESS_TOKEN {
-			twitchDataStruct.accessToken = result.Value
+			a.twitchDataStruct.accessToken = result.Value
 		}
 	}
 
-	if twitchDataStruct.accessToken != "" {
-		isValid, response, err := a.helix.ValidateToken(twitchDataStruct.accessToken)
+	if a.twitchDataStruct.accessToken != "" {
+		isValid, response, err := a.helix.ValidateToken(a.twitchDataStruct.accessToken)
 		if err != nil {
 			// req error
 			return err
@@ -51,14 +50,13 @@ func (a *App) loadSqliteSettings() error {
 				return errors.New("Failed to validate server date time expiry, original error:\n" + err.Error())
 			}
 			t = t.Add(time.Duration(expiresIn) * time.Second)
-			a.helix.SetUserAccessToken(twitchDataStruct.accessToken)
-			twitchDataStruct.expiresDate = t
-			twitchDataStruct.isAuthenticated = true
-			twitchDataStruct.userID = response.Data.UserID
-			twitchDataStruct.login = response.Data.Login
+			a.helix.SetUserAccessToken(a.twitchDataStruct.accessToken)
+			a.twitchDataStruct.expiresDate = t
+			a.twitchDataStruct.isAuthenticated = true
+			a.twitchDataStruct.userID = response.Data.UserID
+			a.twitchDataStruct.login = response.Data.Login
 		}
 	}
-	a.twitchDataStruct = twitchDataStruct
 
 	return nil
 }

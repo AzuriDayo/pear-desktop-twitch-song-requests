@@ -4,7 +4,7 @@ import "./index.css";
 import ConnectWithTwitchEntry from "./features/oauthtwitch/ConnectWithTwitchEntry.tsx";
 import store from "./app/store";
 import { Provider } from "react-redux";
-import { BrowserRouter, Routes, Route, Link } from "react-router";
+import { BrowserRouter, Routes, Route } from "react-router";
 import { ProcessTwitchOAuth } from "./features/oauthtwitch/ProcessTwitchOAuth.tsx";
 import { MusicPlayer } from "./features/musicplayer/MusicPlayer.tsx";
 import { ProcessTwitchSuccess } from "./features/oauthtwitch/ProcessTwitchSuccess.tsx";

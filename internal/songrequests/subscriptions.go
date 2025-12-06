@@ -17,11 +17,7 @@ func GetSubscriptions() []twitch.EventSubscription {
 	return events
 }
 
-func SetSubscriptionHandlers(log *log.Logger, client *twitch.Client) {
-	// client.OnEventChannelChannelPointsCustomRewardRedemptionAdd(func(event twitch.EventChannelChannelPointsCustomRewardRedemptionAdd) {
-	//  // not necessary for sont request input, just check the chat message event instead
-	// 	log.Printf("Reward redeemed: %s by %s with input: %s\n", event.Reward.Title, event.User.UserName, event.UserInput)
-	// })
+func SetSubscriptionHandlers(client *twitch.Client) {
 	client.OnEventStreamOnline(func(event twitch.EventStreamOnline) {
 		log.Printf("Stream online: %s\n", event.BroadcasterUserName)
 	})
