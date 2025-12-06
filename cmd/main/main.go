@@ -77,6 +77,8 @@ func (a *App) Run() error {
 	if err != nil {
 		return err
 	}
+
+	// Auto reconnect twitch ws
 	go func() {
 		for {
 			a.twitchWSService = appservices.NewTwitchWS(a.helix, &a.twitchDataStruct.userID, &a.twitchDataStruct.login, nil, nil, nil, songrequests.GetSubscriptions(), songrequests.SetSubscriptionHandlers)
@@ -93,6 +95,18 @@ func (a *App) Run() error {
 				// always sleep 5s after token validation
 				time.Sleep(5 * time.Second)
 			}
+		}
+	}()
+
+	// Send msgs to ws clients
+	go func() {
+		for {
+			data := <-a.clientsBroadcast
+			a.clientsMu.Lock()
+			for ws := range a.clients {
+				ws.Write(data)
+			}
+			a.clientsMu.Unlock()
 		}
 	}()
 
