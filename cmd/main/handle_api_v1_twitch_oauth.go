@@ -101,7 +101,15 @@ func (a *App) processTwitchOAuth(c echo.Context) error {
 				"error": "Failed to save token in database",
 			})
 		}
-
+		b := echo.Map{
+			"type":          "TWITCH_INFO",
+			"login":         a.twitchDataStruct.login,
+			"expiry_date":   t.Format(data.TWITCH_SERVER_DATE_LAYOUT),
+			"stream_online": a.streamOnline,
+			"reward_id":     a.songRequestRewardID,
+		}
+		bb, _ := json.Marshal(b)
+		a.clientsBroadcast <- string(bb)
 		return c.NoContent(http.StatusOK)
 	} else {
 		return c.NoContent(http.StatusUnauthorized)

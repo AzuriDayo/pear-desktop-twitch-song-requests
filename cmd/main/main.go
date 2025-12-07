@@ -126,6 +126,7 @@ func (a *App) Run() error {
 
 	apiV1 := e.Group("/api/v1")
 	apiV1.POST("/twitch-oauth", a.processTwitchOAuth)
+	apiV1.PATCH("/settings", a.processTwitchSettings)
 	apiV1.GET("/ws", a.handleAppWs)
 
 	var cmd string

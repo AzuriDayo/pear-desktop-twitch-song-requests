@@ -31,6 +31,7 @@ func (a *App) handleAppWs(c echo.Context) error {
 			"login":         a.twitchDataStruct.login,
 			"expiry_date":   expiryDate,
 			"stream_online": a.streamOnline,
+			"reward_id":     a.songRequestRewardID,
 		})
 		err := websocket.Message.Send(ws, string(infoOnConnect))
 		if err != nil {

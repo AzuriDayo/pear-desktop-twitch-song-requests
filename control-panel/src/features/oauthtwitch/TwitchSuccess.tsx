@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 
-export function ProcessTwitchSuccess() {
+export function TwitchSuccess() {
 	return (
 		<div>
 			twitch connect successful

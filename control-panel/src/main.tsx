@@ -7,8 +7,10 @@ import { Provider } from "react-redux";
 import { BrowserRouter, Routes, Route } from "react-router";
 import { ProcessTwitchOAuth } from "./features/oauthtwitch/ProcessTwitchOAuth.tsx";
 import { MusicPlayer } from "./features/musicplayer/MusicPlayer.tsx";
-import { ProcessTwitchSuccess } from "./features/oauthtwitch/ProcessTwitchSuccess.tsx";
+import { TwitchSuccess } from "./features/oauthtwitch/TwitchSuccess.tsx";
 import { TwitchWS } from "./features/twitchws/TwitchWS.tsx";
+import { Home } from "./Home.tsx";
+import { Settings } from "./components/Settings.tsx";
 
 const root = ReactDOM.createRoot(
 	document.getElementById("root") as HTMLElement,
@@ -21,12 +23,12 @@ root.render(
 			<TwitchWS />
 			<BrowserRouter>
 				<Routes>
-					<Route path="/" element={<>home</>} />
-					<Route path="/settings" element={<>settings</>} />
+					<Route path="/" element={<Home />} />
+					<Route path="/settings" element={<Settings />} />
 					<Route path="/queue" element={<>queue</>} />
 					<Route path="oauth">
 						<Route path="twitch-connect" element={<ConnectWithTwitchEntry />} />
-						<Route path="twitch-success" element={<ProcessTwitchSuccess />} />
+						<Route path="twitch-success" element={<TwitchSuccess />} />
 						<Route path="twitch" element={<ProcessTwitchOAuth />} />
 					</Route>
 				</Routes>

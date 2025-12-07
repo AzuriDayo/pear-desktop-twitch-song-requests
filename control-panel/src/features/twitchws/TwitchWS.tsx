@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { useAppSelector } from "../../app/hooks";
+import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { handleWsMessages } from "./handleWsMessages";
 
 export function TwitchWS() {
 	const [, setWs] = useState<WebSocket | null>(null);
 	const [resetWs, setResetWs] = useState(false);
 	const twitchState = useAppSelector((state) => state.twitchState);
-	// const dispatch = useAppDispatch();
+	const dispatch = useAppDispatch();
 
 	// Auto reconnect ws
 	useEffect(() => {
@@ -17,13 +17,13 @@ export function TwitchWS() {
 			const ws = new WebSocket(wsUrl);
 
 			ws.onopen = () => {
-				console.log("Twitch WebSocket connected for music updates");
+				console.log("Twitch WebSocket connected for app updates");
 				setWs(ws);
 			};
 
 			ws.onmessage = (event) => {
 				if (event.type == "message") {
-					handleWsMessages(event.data as string); //, dispatch, {});
+					handleWsMessages(event.data as string, dispatch);
 				} else {
 					console.log("TWITCH_WS bin_data", event);
 				}
