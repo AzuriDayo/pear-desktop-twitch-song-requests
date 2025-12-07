@@ -31,7 +31,8 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-      - run: |
+      - shell: bash
+        run: |
           pnpm i --frozen-lockfile
           pnpm -r build
           rm -rf cmd/main/build
