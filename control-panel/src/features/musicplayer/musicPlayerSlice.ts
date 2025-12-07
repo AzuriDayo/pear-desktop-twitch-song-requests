@@ -27,7 +27,7 @@ const initialState: IMusicPlayerState = {
 	isConnectedToTwitch: false,
 	songLength: 1,
 	videoUrl: "",
-	hostname: "localhost:26538",
+	hostname: "127.0.0.1:26538",
 };
 
 export type TSongInfo = {

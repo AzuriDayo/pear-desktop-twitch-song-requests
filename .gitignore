@@ -92,7 +92,7 @@ typings/
 out/
 
 response*.json
-cmd/tester
+cmd/tester*
 control-panel/build
 venv
 /main.exe
