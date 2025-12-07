@@ -58,6 +58,8 @@ jobs:
     if: github.ref_type == 'tag'
     steps:
       - uses: actions/download-artifact@v5
+        with:
+          merge-multiple: true
       - run: |
           ref="${{ github.ref }}"
           mv pear-desktop-twitch-song-requests_linux_amd64 pear-desktop-twitch-song-requests_linux_amd64-${ref#refs/tags/}
