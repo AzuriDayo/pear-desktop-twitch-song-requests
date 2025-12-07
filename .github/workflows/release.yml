@@ -59,11 +59,12 @@ jobs:
     steps:
       - uses: actions/download-artifact@v5
       - run: |
-          mv pear-desktop-twitch-song-requests_linux_amd64 pear-desktop-twitch-song-requests_linux_amd64-${{ github.ref }}
-          mv pear-desktop-twitch-song-requests_linux_arm64 pear-desktop-twitch-song-requests_linux_arm64-${{ github.ref }}
-          mv pear-desktop-twitch-song-requests_windows_amd64.exe pear-desktop-twitch-song-requests_windows_amd64-${{ github.ref }}.exe
-          mv pear-desktop-twitch-song-requests_darwin_amd64 pear-desktop-twitch-song-requests_darwin_amd64-${{ github.ref }}
-          mv pear-desktop-twitch-song-requests_darwin_arm64 pear-desktop-twitch-song-requests_darwin_arm64-${{ github.ref }}
+          ref="${{ github.ref }}"
+          mv pear-desktop-twitch-song-requests_linux_amd64 pear-desktop-twitch-song-requests_linux_amd64-${ref#refs/tags/}
+          mv pear-desktop-twitch-song-requests_linux_arm64 pear-desktop-twitch-song-requests_linux_arm64-${ref#refs/tags/}
+          mv pear-desktop-twitch-song-requests_windows_amd64.exe pear-desktop-twitch-song-requests_windows_amd64-${ref#refs/tags/}.exe
+          mv pear-desktop-twitch-song-requests_darwin_amd64 pear-desktop-twitch-song-requests_darwin_amd64-${ref#refs/tags/}
+          mv pear-desktop-twitch-song-requests_darwin_arm64 pear-desktop-twitch-song-requests_darwin_arm64-${ref#refs/tags/}
       - uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
