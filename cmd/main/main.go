@@ -51,6 +51,7 @@ type App struct {
 	clients              map[*websocket.Conn]struct{}
 	clientsMu            sync.RWMutex
 	clientsBroadcast     chan string
+	songRequestRewardID  string
 }
 
 func NewApp() *App {
@@ -113,6 +114,8 @@ func (a *App) Run() error {
 			a.clientsMu.Unlock()
 		}
 	}()
+
+	go songrequests.RunGoroutineAddNextSong(a.ctx)
 
 	log.Println("App is running on port 3999...")
 	// Echo instance

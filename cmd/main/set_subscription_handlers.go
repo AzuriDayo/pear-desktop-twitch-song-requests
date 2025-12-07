@@ -3,9 +3,12 @@ package main
 import (
 	"encoding/json"
 	"log"
+	"strings"
 
+	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/songrequests"
 	"github.com/joeyak/go-twitch-eventsub/v3"
 	"github.com/labstack/echo/v4"
+	"github.com/nicklaw5/helix/v2"
 )
 
 func (a *App) SetSubscriptionHandlers() {
@@ -27,6 +30,30 @@ func (a *App) SetSubscriptionHandlers() {
 		log.Println("STREAM_OFFLINE")
 	})
 	a.twitchWSService.Client().OnEventChannelChatMessage(func(event twitch.EventChannelChatMessage) {
+		// Song request
+		isSub := false
+		for _, v := range event.Badges {
+			if v.SetId == "subscriber" {
+				isSub = true
+			}
+		}
 		log.Printf("Chat message from %s: %s %s\n", event.ChatterUserLogin, event.Message.Text, event.ChannelPointsCustomRewardId)
+		if a.streamOnline {
+			if a.songRequestRewardID == event.ChannelPointsCustomRewardId || (strings.HasPrefix(event.Message.Text, "!sr ") && isSub) {
+				s := songrequests.ParseSearchQuery(event.Message.Text)
+				song, err := songrequests.SearchSong(s, 600)
+				if err != nil {
+					a.helix.SendChatMessage(&helix.SendChatMessageParams{
+						BroadcasterID:        event.BroadcasterUserId,
+						SenderID:             a.twitchDataStruct.userID,
+						Message:              err.Error(),
+						ReplyParentMessageID: event.MessageId,
+					})
+					return
+				}
+				log.Println("Searched song: " + song.Title + " - " + song.Artist + ": " + song.VideoID)
+				songrequests.QueueNextSong(song.VideoID)
+			}
+		}
 	})
 }
