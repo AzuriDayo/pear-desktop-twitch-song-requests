@@ -1,0 +1,51 @@
+name: Release
+
+on:
+  push:
+    branches: [master]
+    tags:
+      - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: |
+          pnpm i --frozen-lockfile
+          pnpm -r build
+          rm -rf cmd/main/build
+          cp -r control-panel/build cmd/main
+          ./build_dist.sh
+      - if: github.ref_type == 'tag'
+        run: |
+          mv pear-desktop-twitch-song-requests_linux_amd64 pear-desktop-twitch-song-requests_linux_amd64-${{ github.ref }}
+          mv pear-desktop-twitch-song-requests_linux_arm64 pear-desktop-twitch-song-requests_linux_arm64-${{ github.ref }}
+          mv pear-desktop-twitch-song-requests_windows_amd64.exe pear-desktop-twitch-song-requests_windows_amd64-${{ github.ref }}.exe
+          mv pear-desktop-twitch-song-requests_windows_arm64.exe pear-desktop-twitch-song-requests_windows_arm64-${{ github.ref }}.exe
+          mv pear-desktop-twitch-song-requests_darwin_amd64 pear-desktop-twitch-song-requests_darwin_amd64-${{ github.ref }}
+          mv pear-desktop-twitch-song-requests_darwin_arm64 pear-desktop-twitch-song-requests_darwin_arm64-${{ github.ref }}
+      - if: github.ref_type == 'tag'
+        name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          name: Release ${{ github.ref }}
+          prerelease: ${{ contains(github.ref, '-rc') }}
+          make_latest: true
+          generate_release_notes: true
+          preserve_order: true
+          files: |
+            pear-desktop-twitch-song-requests_windows_amd64-${{ github.ref }}.exe
+            pear-desktop-twitch-song-requests_windows_arm64-${{ github.ref }}.exe
+            pear-desktop-twitch-song-requests_linux_amd64-${{ github.ref }}
+            pear-desktop-twitch-song-requests_linux_arm64-${{ github.ref }}
+            pear-desktop-twitch-song-requests_darwin_amd64-${{ github.ref }}
+            pear-desktop-twitch-song-requests_darwin_arm64-${{ github.ref }}
