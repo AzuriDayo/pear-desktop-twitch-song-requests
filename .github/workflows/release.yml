@@ -16,12 +16,19 @@ jobs:
         with:
           node-version-file: .node-version
           cache: pnpm
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
       - run: |
           pnpm i --frozen-lockfile
           pnpm -r build
           rm -rf cmd/main/build
           cp -r control-panel/build cmd/main
           ./build_dist.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: pear-desktop-twitch-song-requests_*
       - if: github.ref_type == 'tag'
         run: |
           mv pear-desktop-twitch-song-requests_linux_amd64 pear-desktop-twitch-song-requests_linux_amd64-${{ github.ref }}
