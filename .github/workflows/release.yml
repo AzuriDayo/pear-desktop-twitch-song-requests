@@ -53,6 +53,8 @@ jobs:
           path: pear-desktop-twitch-song-requests_*
   publish:
     runs-on: ubuntu-latest
+    needs:
+      - build-and-publish
     if: github.ref_type == 'tag'
     steps:
       - uses: actions/download-artifact@v5
@@ -60,7 +62,6 @@ jobs:
           mv pear-desktop-twitch-song-requests_linux_amd64 pear-desktop-twitch-song-requests_linux_amd64-${{ github.ref }}
           mv pear-desktop-twitch-song-requests_linux_arm64 pear-desktop-twitch-song-requests_linux_arm64-${{ github.ref }}
           mv pear-desktop-twitch-song-requests_windows_amd64.exe pear-desktop-twitch-song-requests_windows_amd64-${{ github.ref }}.exe
-          mv pear-desktop-twitch-song-requests_windows_arm64.exe pear-desktop-twitch-song-requests_windows_arm64-${{ github.ref }}.exe
           mv pear-desktop-twitch-song-requests_darwin_amd64 pear-desktop-twitch-song-requests_darwin_amd64-${{ github.ref }}
           mv pear-desktop-twitch-song-requests_darwin_arm64 pear-desktop-twitch-song-requests_darwin_arm64-${{ github.ref }}
       - uses: softprops/action-gh-release@v2
@@ -74,7 +75,6 @@ jobs:
           preserve_order: true
           files: |
             pear-desktop-twitch-song-requests_windows_amd64-${{ github.ref }}.exe
-            pear-desktop-twitch-song-requests_windows_arm64-${{ github.ref }}.exe
             pear-desktop-twitch-song-requests_linux_amd64-${{ github.ref }}
             pear-desktop-twitch-song-requests_linux_arm64-${{ github.ref }}
             pear-desktop-twitch-song-requests_darwin_amd64-${{ github.ref }}
