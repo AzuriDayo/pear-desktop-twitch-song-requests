@@ -147,8 +147,14 @@ func (a *App) Run() error {
 		cmd = "xdg-open"
 	}
 	args = append(args, "http://localhost:3999/") // must use localhost here because twitch does not allow 127.0.0.1
-	if a.twitchDataStruct.accessToken == "" || a.songRequestRewardID == "" {
+	twitchTokenExpiresSoon := a.twitchDataStruct.isAuthenticated && time.Now().Add(-15*24*time.Hour).After(a.twitchDataStruct.expiresDate)
+	if a.twitchDataStruct.isAuthenticated && twitchTokenExpiresSoon {
+		log.Println("ALERT! Token expiry is soon, consider refreshing token.")
+	}
+	if !a.twitchDataStruct.isAuthenticated || a.songRequestRewardID == "" || twitchTokenExpiresSoon {
 		exec.Command(cmd, args...).Start()
+	} else {
+		log.Println("Friendly reminder, the control panel is available at http://localhost:3999/")
 	}
 	return e.Start("127.0.0.1:3999")
 }
