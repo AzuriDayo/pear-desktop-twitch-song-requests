@@ -94,12 +94,12 @@ func (a *App) Run() error {
 	}
 
 	// Auto reconnect pear desktop and funnel mesasges to channel
+	log.Println("Pear Desktop WS service starting...")
 	ws := recws.RecConn{
 		RecIntvlFactor: 1,               // multiplier backoff
 		RecIntvlMin:    3 * time.Second, // start time
 		NonVerbose:     true,
 		SubscribeHandler: func() error {
-			time.Sleep(time.Second)
 			log.Println("Connected to Pear Desktop")
 			return nil
 		},
@@ -165,9 +165,10 @@ func (a *App) Run() error {
 		}
 	}()
 
-	log.Println("App is running on port 3999...")
 	// Echo instance
 	e := echo.New()
+	e.HideBanner = true
+	e.HidePort = true
 
 	// Middleware
 	e.Use(middleware.Recover())
@@ -202,6 +203,7 @@ func (a *App) Run() error {
 	if !a.twitchDataStruct.isAuthenticated || a.songRequestRewardID == "" || twitchTokenExpiresSoon {
 		exec.Command(cmd, args...).Start()
 	} else {
+		time.Sleep(5 * time.Second)
 		log.Println("Friendly reminder, the control panel is available at http://localhost:3999/")
 	}
 	return e.Start("127.0.0.1:3999")

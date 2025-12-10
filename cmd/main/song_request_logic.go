@@ -57,22 +57,38 @@ func (a *App) songRequestLogic(q string, event twitch.EventChannelChatMessage) e
 
 }
 
-func (a *App) commitAddSongToQueue(song *songrequests.SongResult, event twitch.EventChannelChatMessage) {
-	// Check if song ends <4s to prevent player state changes timing fkup
+func (a *App) safeWaitForSongEnds(underTimeInSeconds int) {
 	songQueueMutex.RLock()
-	if playerInfo.IsPlaying && playerInfo.Song.SongDuration-playerInfo.Position <= 4 {
+	if playerInfo.IsPlaying && playerInfo.Song.SongDuration-playerInfo.Position <= underTimeInSeconds {
 		currentVideoId := playerInfo.Song.VideoId
 		songQueueMutex.RUnlock()
 		// This unlock relock allows for <1s remaining time check
-		songQueueMutex.RLock()
-		for playerInfo.IsPlaying && currentVideoId == playerInfo.Song.VideoId && !(playerInfo.Position <= 5) {
-			songQueueMutex.RUnlock()
+
+		timeout := time.After(time.Duration(underTimeInSeconds+3) * time.Second) // give extra 3 seconds buffer in case of api delay
+	OuterLoop:
+		for {
 			time.Sleep(200 * time.Millisecond)
-			songQueueMutex.RLock()
+			select {
+			case <-timeout:
+				break OuterLoop
+			default:
+				songQueueMutex.RLock()
+				shouldBreak := false
+				if playerInfo.IsPlaying && currentVideoId != playerInfo.Song.VideoId {
+					shouldBreak = true
+				}
+				songQueueMutex.RUnlock()
+				if shouldBreak {
+					break OuterLoop
+				}
+			}
 		}
 	}
-	songQueueMutex.RUnlock()
-	// Finally done lock unlock timing checks
+}
+
+func (a *App) commitAddSongToQueue(song *songrequests.SongResult, event twitch.EventChannelChatMessage) {
+	// Check if song ends <4s to prevent player state changes timing fkup
+	a.safeWaitForSongEnds(4)
 
 	// Actually put song in queue
 	songQueueMutex.Lock()
