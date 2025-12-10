@@ -1,6 +1,6 @@
 module github.com/azuridayo/pear-desktop-twitch-song-requests
 
-go 1.25.4
+go 1.25.5
 
 require (
 	github.com/go-jet/jet/v2 v2.14.0

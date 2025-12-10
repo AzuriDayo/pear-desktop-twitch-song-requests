@@ -102,3 +102,5 @@ pear-desktop-twitch-song-requests.db
 /pear-desktop-twitch-song-requests_darwin_*
 /pear-desktop-twitch-song-requests_windows_*
 local-run-debug.sh
+__debug_bin.exe
+__debug_bin

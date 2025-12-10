@@ -51,9 +51,6 @@ func (a *App) handlePearDesktopMsgs() {
 						VideoId:          newVideoId,
 					}
 					playerInfo.Song = songinfo
-					if len(songQueue) > 1 {
-						songQueue = songQueue[1:]
-					}
 					if len(songQueue) > 1 && songQueue[0].song.VideoID != newVideoId {
 						// queue invalid now, wiping queue
 						songQueue = []struct {
@@ -61,6 +58,9 @@ func (a *App) handlePearDesktopMsgs() {
 							song        songrequests.SongResult
 						}{}
 						log.Println("queue was wiped because it was out of sync with Pear Desktop")
+					}
+					if len(songQueue) > 1 {
+						songQueue = songQueue[1:]
 					}
 				}
 				songQueueMutex.Unlock()

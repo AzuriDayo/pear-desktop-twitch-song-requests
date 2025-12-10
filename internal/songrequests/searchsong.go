@@ -346,20 +346,19 @@ func SearchSong(query string, minLength int, maxLength int) (*SongResult, error)
 
 func validateTime(s string, min, max int) bool {
 	template := "2000-01-01 00:00:00"
-	tmax, _ := time.Parse(time.DateTime, template)
-	tmax = tmax.Add(time.Duration(max) * time.Second)
-	tmin, _ := time.Parse(time.DateTime, template)
-	tmin = tmin.Add(time.Duration(min) * time.Second)
-	if len(s) > len(template) {
+	if len(s) >= len(template) {
 		// Loose return when error occurs
 		return true
 	}
-	s = template[0:len(s)] + s
-	t, err := time.Parse(time.TimeOnly, s)
+	s = template[0:len(template)-len(s)] + s
+	t, err := time.Parse(time.DateTime, s)
 	if err != nil {
 		// Loose return when error occurs
 		return true
 	}
-
+	tmax, _ := time.Parse(time.DateTime, template)
+	tmax = tmax.Add(time.Duration(max) * time.Second)
+	tmin, _ := time.Parse(time.DateTime, template)
+	tmin = tmin.Add(time.Duration(min) * time.Second)
 	return !(t.After(tmax) || t.Before(tmin))
 }
