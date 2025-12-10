@@ -74,7 +74,7 @@ func (a *App) safeWaitForSongEnds(underTimeInSeconds int) {
 			default:
 				songQueueMutex.RLock()
 				shouldBreak := false
-				if playerInfo.IsPlaying && currentVideoId != playerInfo.Song.VideoId {
+				if currentVideoId != playerInfo.Song.VideoId || (playerInfo.IsPlaying && playerInfo.Position >= 1) {
 					shouldBreak = true
 				}
 				songQueueMutex.RUnlock()
@@ -83,6 +83,8 @@ func (a *App) safeWaitForSongEnds(underTimeInSeconds int) {
 				}
 			}
 		}
+	} else {
+		songQueueMutex.RUnlock()
 	}
 }
 
@@ -92,6 +94,7 @@ func (a *App) commitAddSongToQueue(song *songrequests.SongResult, event twitch.E
 
 	// Actually put song in queue
 	songQueueMutex.Lock()
+	defer songQueueMutex.Unlock()
 	b := echo.Map{
 		"videoId":        song.VideoID,
 		"insertPosition": "INSERT_AFTER_CURRENT_VIDEO",
@@ -107,7 +110,6 @@ func (a *App) commitAddSongToQueue(song *songrequests.SongResult, event twitch.E
 			Message:              emsg,
 			ReplyParentMessageID: event.MessageId,
 		})
-		songQueueMutex.Unlock()
 		return
 	}
 	songQueue = append(songQueue, struct {
@@ -122,7 +124,6 @@ func (a *App) commitAddSongToQueue(song *songrequests.SongResult, event twitch.E
 	for i, v := range songQueue {
 		log.Println(i+1, v.song, "-", v.song.Artist)
 	}
-	defer songQueueMutex.Unlock()
 
 	// save to history
 	// TODO
@@ -155,15 +156,15 @@ func (a *App) commitAddSongToQueue(song *songrequests.SongResult, event twitch.E
 
 	nowIndex := -1
 	addedSongIndex := -1
-	active := true
-	breakAfter3s := time.After(time.Second * 3)
-	for active {
-		time.Sleep(100 * time.Millisecond)
+	timeout := time.After(time.Second * 10)
+OuterLoop:
+	for {
+		time.Sleep(time.Millisecond * 500)
 		select {
-		case <-breakAfter3s:
-			active = false
+		case <-timeout:
+			break OuterLoop
 		default:
-			resp, err = http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/queue")
+			resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/queue")
 			if err != nil || resp.StatusCode != http.StatusOK {
 				emsg := "Internal error when checking if song is already in queue. Disregard previous message."
 				log.Println(emsg, err)
@@ -190,7 +191,7 @@ func (a *App) commitAddSongToQueue(song *songrequests.SongResult, event twitch.E
 			err = json.Unmarshal(qb, &queue)
 			resp.Body.Close()
 			if err != nil {
-				emsg := "Failed to check queue order. Must fix the song order manually!"
+				emsg := event.Broadcaster.BroadcasterUserLogin + " Failed to check queue order. Must fix the song order manually!"
 				log.Println(emsg, err)
 				a.helix.SendChatMessage(&helix.SendChatMessageParams{
 					BroadcasterID:        event.BroadcasterUserId,
@@ -206,14 +207,14 @@ func (a *App) commitAddSongToQueue(song *songrequests.SongResult, event twitch.E
 					nowIndex = i
 					// nowIndex = v.PlaylistPanelVideoRenderer.NavigationEndpoint.WatchEndpoint.Index
 				}
-				if song.VideoID == v.PlaylistPanelVideoRenderer.VideoId {
+				if song.VideoID == v.PlaylistPanelVideoRenderer.VideoId && nowIndex != -1 {
 					// addedSongIndex = v.PlaylistPanelVideoRenderer.NavigationEndpoint.WatchEndpoint.Index
 					addedSongIndex = i
 					break
 				}
 			}
 			if nowIndex != -1 && addedSongIndex != -1 {
-				active = false
+				break OuterLoop
 			}
 		}
 	}
@@ -223,7 +224,7 @@ func (a *App) commitAddSongToQueue(song *songrequests.SongResult, event twitch.E
 		a.helix.SendChatMessage(&helix.SendChatMessageParams{
 			BroadcasterID:        event.BroadcasterUserId,
 			SenderID:             a.twitchDataStruct.userID,
-			Message:              "Failed to queue song in the right order. Must fix the song order manually!",
+			Message:              event.Broadcaster.BroadcasterUserLogin + " Failed to queue song in the right order. Must fix the song order manually!",
 			ReplyParentMessageID: event.MessageId,
 		})
 		return
@@ -240,7 +241,7 @@ func (a *App) commitAddSongToQueue(song *songrequests.SongResult, event twitch.E
 		a.helix.SendChatMessage(&helix.SendChatMessageParams{
 			BroadcasterID:        event.BroadcasterUserId,
 			SenderID:             a.twitchDataStruct.userID,
-			Message:              "Failed to move song in the right order. Must fix the song order manually!",
+			Message:              event.Broadcaster.BroadcasterUserLogin + " Failed to move song in the right order. Must fix the song order manually!",
 			ReplyParentMessageID: event.MessageId,
 		})
 		return
