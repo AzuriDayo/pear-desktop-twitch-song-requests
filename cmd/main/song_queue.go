@@ -6,7 +6,7 @@ import (
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/songrequests"
 )
 
-var songQueueMutex sync.RWMutex
+var songQueueMutex = sync.RWMutex{}
 
 var songQueue = []struct {
 	requestedBy string

@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 	"os"
-	"time"
 
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/data"
 	"github.com/nicklaw5/helix/v2"
@@ -54,7 +53,6 @@ func (s *TwitchWS) StartCtx(ctx context.Context) error {
 				hasSubError = true
 			}
 		}
-		time.Sleep(time.Second * 2)
 		if hasSubError {
 			s.log.Printf("There were issues when listening to Twitch events. Please refresh your Twitch token and restart the app.")
 		} else {

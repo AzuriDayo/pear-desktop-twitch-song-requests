@@ -59,7 +59,7 @@ func (a *App) handlePearDesktopMsgs() {
 						}{}
 						log.Println("queue was wiped because it was out of sync with Pear Desktop")
 					}
-					if len(songQueue) > 1 {
+					if len(songQueue) > 0 {
 						songQueue = songQueue[1:]
 					}
 				}

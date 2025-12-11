@@ -15,86 +15,23 @@ import (
 	"github.com/nicklaw5/helix/v2"
 )
 
-func (a *App) songRequestLogic(q string, event twitch.EventChannelChatMessage) error {
-	s := songrequests.ParseSearchQuery(q)
-	song, err := songrequests.SearchSong(s, 60, 600)
-	if err != nil {
-		return err
-	}
+var srChan = make(chan struct {
+	song  *songrequests.SongResult
+	event twitch.EventChannelChatMessage
+})
 
-	// Loop through queue state to check if song is queued already
-	songQueueMutex.RLock()
-	songExistsInQueue := false
-	for _, v := range songQueue {
-		if v.song.VideoID == song.VideoID {
-			songExistsInQueue = true
-			break
-		}
-	}
-	songQueueMutex.RUnlock()
-	if songExistsInQueue {
-		msg := "Song is already in queue!"
-		a.helix.SendChatMessage(&helix.SendChatMessageParams{
-			BroadcasterID:        event.BroadcasterUserId,
-			SenderID:             a.twitchDataStruct.userID,
-			Message:              msg,
-			ReplyParentMessageID: event.MessageId,
-		})
-		return nil
-	}
-
-	// Committing to adding song to q
-	a.helix.SendChatMessage(&helix.SendChatMessageParams{
-		BroadcasterID:        event.BroadcasterUserId,
-		SenderID:             a.twitchDataStruct.userID,
-		Message:              "Added song: " + song.Title + " - " + song.Artist + " " + "https://youtu.be/" + song.VideoID,
-		ReplyParentMessageID: event.MessageId,
-	})
-
-	go a.commitAddSongToQueue(song, event)
-
-	return nil
-
-}
-
-func (a *App) safeWaitForSongEnds(underTimeInSeconds int) {
-	songQueueMutex.RLock()
-	if playerInfo.IsPlaying && playerInfo.Song.SongDuration-playerInfo.Position <= underTimeInSeconds {
-		currentVideoId := playerInfo.Song.VideoId
-		songQueueMutex.RUnlock()
-		// This unlock relock allows for <1s remaining time check
-
-		timeout := time.After(time.Duration(underTimeInSeconds+3) * time.Second) // give extra 3 seconds buffer in case of api delay
-	OuterLoop:
-		for {
-			time.Sleep(200 * time.Millisecond)
-			select {
-			case <-timeout:
-				break OuterLoop
-			default:
-				songQueueMutex.RLock()
-				shouldBreak := false
-				if currentVideoId != playerInfo.Song.VideoId || (playerInfo.IsPlaying && playerInfo.Position >= 1) {
-					shouldBreak = true
-				}
-				songQueueMutex.RUnlock()
-				if shouldBreak {
-					break OuterLoop
-				}
-			}
-		}
-	} else {
-		songQueueMutex.RUnlock()
-	}
-}
-
-func (a *App) commitAddSongToQueue(song *songrequests.SongResult, event twitch.EventChannelChatMessage) {
+func (a *App) songRequestLogic(song *songrequests.SongResult, event twitch.EventChannelChatMessage) {
 	// Check if song ends <4s to prevent player state changes timing fkup
-	a.safeWaitForSongEnds(4)
-
-	// Actually put song in queue
-	songQueueMutex.Lock()
+	a.safeLockMutexWaitForSongEnds(4)
 	defer songQueueMutex.Unlock()
+
+	for _, v := range songQueue {
+		if song.VideoID == v.song.VideoID {
+			// Song was added too fast, between internal api calls
+			return
+		}
+	}
+
 	b := echo.Map{
 		"videoId":        song.VideoID,
 		"insertPosition": "INSERT_AFTER_CURRENT_VIDEO",
@@ -112,6 +49,14 @@ func (a *App) commitAddSongToQueue(song *songrequests.SongResult, event twitch.E
 		})
 		return
 	}
+
+	nowIndex := -1
+	addedSongIndex := -1
+	afterVideoIndex := -1
+	afterVideoId := playerInfo.Song.VideoId
+	if len(songQueue) > 0 {
+		afterVideoId = songQueue[len(songQueue)-1].song.VideoID
+	}
 	songQueue = append(songQueue, struct {
 		requestedBy string
 		song        songrequests.SongResult
@@ -119,11 +64,6 @@ func (a *App) commitAddSongToQueue(song *songrequests.SongResult, event twitch.E
 		requestedBy: event.ChatterUserLogin,
 		song:        *song,
 	})
-
-	log.Println("songqueue list")
-	for i, v := range songQueue {
-		log.Println(i+1, v.song, "-", v.song.Artist)
-	}
 
 	// save to history
 	// TODO
@@ -154,8 +94,6 @@ func (a *App) commitAddSongToQueue(song *songrequests.SongResult, event twitch.E
 		} `json:"items"`
 	}{}
 
-	nowIndex := -1
-	addedSongIndex := -1
 	timeout := time.After(time.Second * 10)
 OuterLoop:
 	for {
@@ -201,26 +139,31 @@ OuterLoop:
 				})
 				return
 			}
-
+			nowIndex = -1
+			addedSongIndex = -1
+			afterVideoIndex = -1
 			for i, v := range queue.Items {
 				if v.PlaylistPanelVideoRenderer.Selected {
 					nowIndex = i
-					// nowIndex = v.PlaylistPanelVideoRenderer.NavigationEndpoint.WatchEndpoint.Index
 				}
-				if song.VideoID == v.PlaylistPanelVideoRenderer.VideoId && nowIndex != -1 {
-					// addedSongIndex = v.PlaylistPanelVideoRenderer.NavigationEndpoint.WatchEndpoint.Index
+				if nowIndex != -1 && afterVideoId == v.PlaylistPanelVideoRenderer.VideoId {
+					afterVideoIndex = i
+				}
+				if nowIndex != -1 && song.VideoID == v.PlaylistPanelVideoRenderer.VideoId {
 					addedSongIndex = i
+				}
+				if afterVideoIndex != -1 && addedSongIndex != -1 {
 					break
 				}
 			}
-			if nowIndex != -1 && addedSongIndex != -1 {
+			if nowIndex != -1 && addedSongIndex != -1 && afterVideoIndex != -1 {
 				break OuterLoop
 			}
 		}
 	}
 
 	// get song index & drag song down to wherever is needed
-	if nowIndex == -1 || addedSongIndex == -1 {
+	if nowIndex == -1 || addedSongIndex == -1 || afterVideoIndex == -1 {
 		a.helix.SendChatMessage(&helix.SendChatMessageParams{
 			BroadcasterID:        event.BroadcasterUserId,
 			SenderID:             a.twitchDataStruct.userID,
@@ -231,8 +174,12 @@ OuterLoop:
 	}
 
 	// Drag song into the right order
+	if afterVideoIndex+1 == addedSongIndex {
+		// do not move anything
+		return
+	}
 	b2, _ := json.Marshal(echo.Map{
-		"toIndex": nowIndex + len(songQueue),
+		"toIndex": afterVideoIndex,
 	})
 	req, _ := http.NewRequest(http.MethodPatch, "http://"+songrequests.GetPearDesktopHost()+"/api/v1/queue/"+strconv.Itoa(addedSongIndex), bytes.NewBuffer(b2))
 	req.Header.Set("Content-Type", "application/json")
@@ -247,4 +194,73 @@ OuterLoop:
 		return
 	}
 	// Already replied to chatter song is alr added to q
+}
+
+func (a *App) safeLockMutexWaitForSongEnds(underTimeInSeconds int) {
+	songQueueMutex.Lock()
+	if playerInfo.IsPlaying && playerInfo.Song.SongDuration-playerInfo.Position <= underTimeInSeconds {
+		currentVideoId := playerInfo.Song.VideoId
+		// This unlock relock allows for <1s remaining time check
+
+		queue := struct {
+			Items []struct {
+				PlaylistPanelVideoRenderer struct {
+					VideoId         string `json:"videoId"`
+					Selected        bool   `json:"selected"`
+					ShortByLineText struct {
+						Runs []struct {
+							Text string `json:"text"`
+						} `json:"runs"`
+					} `json:"shortByLineText"`
+					Title struct {
+						Runs []struct {
+							Text string `json:"text"`
+						} `json:"runs"`
+					} `json:"title"`
+					NavigationEndpoint struct {
+						WatchEndpoint struct {
+							Index int `json:"index"`
+						} `json:"watchEndpoint"`
+					} `json:"navigationEndpoint"`
+				} `json:"playlistPanelVideoRenderer"`
+			} `json:"items"`
+		}{}
+		timeout := time.After(time.Duration(underTimeInSeconds+10) * time.Second) // give extra 10 seconds buffer in case of api delay
+		for {
+			time.Sleep(200 * time.Millisecond)
+			select {
+			case <-timeout:
+				return
+			default:
+				shouldBreak := false
+				resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/queue")
+				if err != nil || resp.StatusCode != http.StatusOK {
+					continue
+				}
+				qb, err := io.ReadAll(resp.Body)
+				if err != nil {
+					continue
+				}
+				err = json.Unmarshal(qb, &queue)
+				resp.Body.Close()
+				if err != nil {
+					continue
+				}
+
+				for _, v := range queue.Items {
+					if v.PlaylistPanelVideoRenderer.Selected && v.PlaylistPanelVideoRenderer.VideoId != currentVideoId {
+						shouldBreak = true
+						break
+					}
+					if v.PlaylistPanelVideoRenderer.Selected {
+						break
+					}
+				}
+
+				if shouldBreak {
+					return
+				}
+			}
+		}
+	}
 }
