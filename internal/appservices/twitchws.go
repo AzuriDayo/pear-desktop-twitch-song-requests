@@ -27,14 +27,12 @@ func (s *TwitchWS) StartCtx(ctx context.Context) error {
 	s.log.Println("Twitch WS service starting...")
 
 	s.client = twitch.NewClient()
+	hasSubError := false
 	s.client.OnWelcome(func(message twitch.WelcomeMessage) {
-		s.log.Printf("WELCOME: subscribing to events...\n")
 		clientID := data.GetTwitchClientID()
 		accessToken := s.helixMain.GetUserAccessToken()
 
 		for _, event := range s.subs {
-			s.log.Printf("subscribing to %s\n", event)
-
 			condition := map[string]string{
 				"broadcaster_user_id": *s.mainUserId,
 			}
@@ -51,7 +49,14 @@ func (s *TwitchWS) StartCtx(ctx context.Context) error {
 			})
 			if err != nil {
 				s.log.Printf("ERROR: %v\n", err)
+				s.log.Printf("Failed to subscribe to %s", event)
+				hasSubError = true
 			}
+		}
+		if hasSubError {
+			s.log.Printf("There were issues when listening to Twitch events. Please refresh your Twitch token and restart the app.")
+		} else {
+			s.log.Println("Connected to Twitch")
 		}
 	})
 	s.client.OnRevoke(func(message twitch.RevokeMessage) {
@@ -77,7 +82,7 @@ func NewTwitchWS(hc *helix.Client, mainUserId *string, mainTwitchChannel *string
 		mainUserId:        mainUserId,
 		botUserId:         botUserId,
 		helixMain:         hc,
-		log:               log.New(os.Stderr, "TWITCH_WS ", log.Ldate|log.Ltime),
+		log:               log.New(os.Stderr, "", log.Ldate|log.Ltime),
 		subs:              subs,
 		setupHandlers:     setupHandlers,
 	}
