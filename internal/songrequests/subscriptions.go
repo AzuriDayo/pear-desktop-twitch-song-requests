@@ -14,3 +14,11 @@ func GetSubscriptions() []twitch.EventSubscription {
 
 	return events
 }
+
+func GetSubscriptionsBot() []twitch.EventSubscription {
+	events := []twitch.EventSubscription{
+		twitch.SubChannelChatMessage,
+	}
+
+	return events
+}

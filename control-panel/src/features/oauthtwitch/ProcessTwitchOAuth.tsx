@@ -86,7 +86,7 @@ export function ProcessTwitchOAuth() {
 				return;
 			}
 		} else {
-			navigate("/oauth/twitch-connect");
+			navigate("/");
 		}
 	}, []);
 
@@ -96,7 +96,7 @@ export function ProcessTwitchOAuth() {
 				<>
 					<h3>{errorObj.error}</h3>
 					<br />
-					<Link to={"/oauth/twitch-connect"}>Retry</Link>
+					<Link to={"/"}>Retry</Link>
 				</>
 			) : (
 				<h2>Working...</h2>

@@ -26,7 +26,7 @@ import (
 	"golang.org/x/net/websocket"
 )
 
-type twitchData = struct {
+type twitchData struct {
 	accessToken     string
 	login           string
 	userID          string
@@ -52,8 +52,11 @@ func main() {
 
 type App struct {
 	twitchDataStruct        *twitchData
+	twitchDataStructBot     *twitchData
 	helix                   *helix.Client
+	helixBot                *helix.Client
 	twitchWSService         *appservices.TwitchWS
+	twitchWSBotService      *appservices.TwitchWS
 	streamOnline            bool
 	twitchWSIncomingMsgs    chan []byte
 	pearDesktopIncomingMsgs chan []byte
@@ -70,11 +73,16 @@ func NewApp() *App {
 	c, _ := helix.NewClient(&helix.Options{
 		ClientID: data.GetTwitchClientID(),
 	})
+	c2, _ := helix.NewClient(&helix.Options{
+		ClientID: data.GetTwitchClientID(),
+	})
 	return &App{
 		twitchDataStruct:        &twitchData{},
+		twitchDataStructBot:     &twitchData{},
 		ctx:                     ctx,
 		cancel:                  cancel,
 		helix:                   c,
+		helixBot:                c2,
 		clientsBroadcast:        make(chan string),
 		twitchWSIncomingMsgs:    make(chan []byte),
 		clientsMu:               sync.RWMutex{},
@@ -134,11 +142,33 @@ func (a *App) Run() error {
 	// Auto reconnect twitch ws
 	go func() {
 		for {
-			a.twitchWSService = appservices.NewTwitchWS(a.helix, &a.twitchDataStruct.userID, &a.twitchDataStruct.login, nil, nil, nil, songrequests.GetSubscriptions(), a.SetSubscriptionHandlers)
+			a.twitchWSService = appservices.NewTwitchWS(a.helix, &a.twitchDataStruct.userID, &a.twitchDataStruct.login, nil, nil, nil, songrequests.GetSubscriptions(), a.SetSubscriptionHandlers, false)
 			if a.helix.GetUserAccessToken() != "" {
 				valid, _, _ := a.helix.ValidateToken(a.helix.GetUserAccessToken())
 				if valid {
 					err := a.twitchWSService.StartCtx(a.ctx)
+					if err == nil {
+						// graceful shutdown
+						return
+					}
+					log.Println("Twitch WS disconnected, attempt to reconnect")
+				}
+				// always sleep 5s after token validation
+				time.Sleep(5 * time.Second)
+			} else {
+				time.Sleep(5 * time.Second)
+			}
+		}
+	}()
+
+	// Auto reconnect twitch ws
+	go func() {
+		for {
+			a.twitchWSBotService = appservices.NewTwitchWS(a.helixBot, &a.twitchDataStructBot.userID, &a.twitchDataStructBot.login, a.helix, &a.twitchDataStruct.userID, &a.twitchDataStruct.login, songrequests.GetSubscriptionsBot(), a.SetSubscriptionHandlersBot, true)
+			if a.helixBot.GetUserAccessToken() != "" {
+				valid, _, _ := a.helixBot.ValidateToken(a.helixBot.GetUserAccessToken())
+				if valid {
+					err := a.twitchWSBotService.StartCtx(a.ctx)
 					if err == nil {
 						// graceful shutdown
 						return
@@ -207,7 +237,11 @@ func (a *App) Run() error {
 	if a.twitchDataStruct.isAuthenticated && twitchTokenExpiresSoon {
 		log.Println("ALERT! Token expiry is soon, consider refreshing token.")
 	}
-	if !a.twitchDataStruct.isAuthenticated || a.songRequestRewardID == "" || twitchTokenExpiresSoon {
+	twitchTokenBotExpiresSoon := a.twitchDataStructBot.isAuthenticated && time.Now().Add(-15*24*time.Hour).After(a.twitchDataStructBot.expiresDate)
+	if a.twitchDataStructBot.isAuthenticated && twitchTokenBotExpiresSoon {
+		log.Println("ALERT! Bot Token expiry is soon, consider refreshing token.")
+	}
+	if !a.twitchDataStruct.isAuthenticated || a.songRequestRewardID == "" || twitchTokenExpiresSoon || twitchTokenBotExpiresSoon {
 		exec.Command(cmd, args...).Start()
 	} else {
 		time.Sleep(5 * time.Second)

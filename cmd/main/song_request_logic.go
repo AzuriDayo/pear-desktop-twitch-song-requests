@@ -8,10 +8,12 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/gen/model"
 	. "github.com/azuridayo/pear-desktop-twitch-song-requests/gen/table"
+	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/data"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/databaseconn"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/songrequests"
 	"github.com/joeyak/go-twitch-eventsub/v3"
@@ -29,6 +31,16 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, event twitch.Event
 	a.safeLockMutexWaitForSongEnds(4)
 	defer songQueueMutex.Unlock()
 
+	var useProperHelix *helix.Client
+	properUserID := ""
+	if a.twitchDataStructBot.isAuthenticated {
+		useProperHelix = a.helixBot
+		properUserID = a.twitchDataStructBot.userID
+	} else {
+		useProperHelix = a.helix
+		properUserID = a.twitchDataStruct.userID
+	}
+
 	for _, v := range songQueue {
 		if song.VideoID == v.song.VideoID {
 			// Song was added too fast, between internal api calls
@@ -45,13 +57,18 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, event twitch.Event
 	if err != nil || resp.StatusCode != http.StatusNoContent {
 		emsg := "Internal error when adding song to queue. Disregard previous message."
 		log.Println(emsg, err)
-		a.helix.SendChatMessage(&helix.SendChatMessageParams{
+		useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
 			BroadcasterID:        event.BroadcasterUserId,
-			SenderID:             a.twitchDataStruct.userID,
+			SenderID:             properUserID,
 			Message:              emsg,
 			ReplyParentMessageID: event.MessageId,
 		})
 		return
+	}
+	if strings.EqualFold(event.BroadcasterUserLogin, a.twitchDataStructBot.login) {
+		log.Println("hehe chatter " + event.ChatterUserLogin + ": Queued song " + song.Title + " - " + song.Artist)
+	} else {
+		log.Println(event.ChatterUserLogin + ": Queued song " + song.Title + " - " + song.Artist)
 	}
 
 	nowIndex := -1
@@ -91,7 +108,7 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, event twitch.Event
 		srrData := model.SongRequestRequesters{
 			VideoID:        song.VideoID,
 			TwitchUsername: event.ChatterUserLogin,
-			RequestedAt:    time.Now().Local().Format(time.RFC1123),
+			RequestedAt:    time.Now().Local().Format(data.TWITCH_SERVER_DATE_LAYOUT),
 		}
 		stmt = SongRequestRequesters.INSERT(SongRequestRequesters.AllColumns).MODEL(srrData)
 		_, err = stmt.Exec(db)
@@ -139,9 +156,9 @@ OuterLoop:
 			if err != nil || resp.StatusCode != http.StatusOK {
 				emsg := "Internal error when checking if song is already in queue. Disregard previous message."
 				log.Println(emsg, err)
-				a.helix.SendChatMessage(&helix.SendChatMessageParams{
+				useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
 					BroadcasterID:        event.BroadcasterUserId,
-					SenderID:             a.twitchDataStruct.userID,
+					SenderID:             properUserID,
 					Message:              emsg,
 					ReplyParentMessageID: event.MessageId,
 				})
@@ -151,9 +168,9 @@ OuterLoop:
 			if err != nil {
 				emsg := "Internal error processing data to check if song is already in queue. Disregard previous message."
 				log.Println(emsg, err)
-				a.helix.SendChatMessage(&helix.SendChatMessageParams{
+				useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
 					BroadcasterID:        event.BroadcasterUserId,
-					SenderID:             a.twitchDataStruct.userID,
+					SenderID:             properUserID,
 					Message:              emsg,
 					ReplyParentMessageID: event.MessageId,
 				})
@@ -164,9 +181,9 @@ OuterLoop:
 			if err != nil {
 				emsg := event.Broadcaster.BroadcasterUserLogin + " Failed to check queue order. Must fix the song order manually!"
 				log.Println(emsg, err)
-				a.helix.SendChatMessage(&helix.SendChatMessageParams{
+				useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
 					BroadcasterID:        event.BroadcasterUserId,
-					SenderID:             a.twitchDataStruct.userID,
+					SenderID:             properUserID,
 					Message:              emsg,
 					ReplyParentMessageID: event.MessageId,
 				})
@@ -178,6 +195,9 @@ OuterLoop:
 			for i, v := range queue.Items {
 				if v.PlaylistPanelVideoRenderer.Selected {
 					nowIndex = i
+				}
+				if nowIndex == -1 {
+					continue
 				}
 				if nowIndex != -1 && afterVideoId == v.PlaylistPanelVideoRenderer.VideoId {
 					afterVideoIndex = i
@@ -197,9 +217,9 @@ OuterLoop:
 
 	// get song index & drag song down to wherever is needed
 	if nowIndex == -1 || addedSongIndex == -1 || afterVideoIndex == -1 {
-		a.helix.SendChatMessage(&helix.SendChatMessageParams{
+		useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
 			BroadcasterID:        event.BroadcasterUserId,
-			SenderID:             a.twitchDataStruct.userID,
+			SenderID:             properUserID,
 			Message:              event.Broadcaster.BroadcasterUserLogin + " Failed to queue song in the right order. Must fix the song order manually!",
 			ReplyParentMessageID: event.MessageId,
 		})
@@ -218,9 +238,9 @@ OuterLoop:
 	req.Header.Set("Content-Type", "application/json")
 	resp2, err := http.DefaultClient.Do(req)
 	if err != nil || resp2.StatusCode != http.StatusNoContent {
-		a.helix.SendChatMessage(&helix.SendChatMessageParams{
+		useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
 			BroadcasterID:        event.BroadcasterUserId,
-			SenderID:             a.twitchDataStruct.userID,
+			SenderID:             properUserID,
 			Message:              event.Broadcaster.BroadcasterUserLogin + " Failed to move song in the right order. Must fix the song order manually!",
 			ReplyParentMessageID: event.MessageId,
 		})

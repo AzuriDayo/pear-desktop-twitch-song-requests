@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import "./ConnectWithTwitchEntry.css";
 
-function ConnectWithTwitchEntry() {
+function ConnectWithTwitchEntry(props: { forBot: boolean }) {
 	const [params, setParams] = useState<URLSearchParams>();
 
 	// on page load, set the oauth params
@@ -16,15 +16,24 @@ function ConnectWithTwitchEntry() {
 			"redirect_uri",
 			"http://" + window.location.host + "/oauth/twitch",
 		);
-		params.append(
-			"scope",
-			[
+		const scopes = [
+			"user:read:chat",
+			"user:write:chat",
+			"user:bot",
+			"channel:bot",
+		];
+		if (!props.forBot) {
+			scopes.push(
 				"channel:read:redemptions",
-				"user:read:chat",
-				"user:write:chat",
-				"user:bot",
-			].join(" "),
-		);
+				"channel:read:vips",
+				"moderation:read",
+				"channel:read:subscriptions",
+			);
+		}
+		params.append("scope", scopes.join(" "));
+		if (props.forBot) {
+			params.append("state", "bot");
+		}
 		setParams(params);
 		/*
 			example fragment: #access_token=73d0f8mkabpbmjp921asv2jaidwxn&scope=channel%3Amanage%3Apolls+channel%3Aread%3Apolls&state=c3ab8aa609ea11e793ae92361f002671&token_type=bearer
@@ -35,7 +44,9 @@ function ConnectWithTwitchEntry() {
 	return (
 		<>
 			<a href={`https://id.twitch.tv/oauth2/authorize?${params}`}>
-				Connect with Twitch
+				{props.forBot
+					? "Connect with Twitch bot account"
+					: "Connect with Twitch main account"}
 			</a>
 		</>
 	);
