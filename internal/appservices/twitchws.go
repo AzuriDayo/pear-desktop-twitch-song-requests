@@ -27,7 +27,11 @@ type TwitchWS struct {
 }
 
 func (s *TwitchWS) StartCtx(ctx context.Context) error {
-	s.log.Println("Twitch WS service starting...")
+	if s.isBotMode {
+		s.log.Println("Twitch WS bot service starting...")
+	} else {
+		s.log.Println("Twitch WS main service starting...")
+	}
 
 	s.client = twitch.NewClient()
 	hasSubError := false
