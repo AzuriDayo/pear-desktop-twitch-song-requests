@@ -72,13 +72,16 @@ func NewApp() *App {
 	c, _ := helix.NewClient(&helix.Options{
 		ClientID: data.GetTwitchClientID(),
 	})
+	c2, _ := helix.NewClient(&helix.Options{
+		ClientID: data.GetTwitchClientID(),
+	})
 	return &App{
 		twitchDataStruct:        &twitchData{},
 		twitchDataStructBot:     &twitchData{},
 		ctx:                     ctx,
 		cancel:                  cancel,
 		helix:                   c,
-		helixBot:                nil,
+		helixBot:                c2,
 		clientsBroadcast:        make(chan string),
 		twitchWSIncomingMsgs:    make(chan []byte),
 		clientsMu:               sync.RWMutex{},
@@ -211,7 +214,11 @@ func (a *App) Run() error {
 	if a.twitchDataStruct.isAuthenticated && twitchTokenExpiresSoon {
 		log.Println("ALERT! Token expiry is soon, consider refreshing token.")
 	}
-	if !a.twitchDataStruct.isAuthenticated || a.songRequestRewardID == "" || twitchTokenExpiresSoon {
+	twitchTokenBotExpiresSoon := a.twitchDataStructBot.isAuthenticated && time.Now().Add(-15*24*time.Hour).After(a.twitchDataStructBot.expiresDate)
+	if a.twitchDataStructBot.isAuthenticated && twitchTokenBotExpiresSoon {
+		log.Println("ALERT! Bot Token expiry is soon, consider refreshing token.")
+	}
+	if !a.twitchDataStruct.isAuthenticated || a.songRequestRewardID == "" || twitchTokenExpiresSoon || twitchTokenBotExpiresSoon {
 		exec.Command(cmd, args...).Start()
 	} else {
 		time.Sleep(5 * time.Second)

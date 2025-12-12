@@ -38,6 +38,9 @@ func (a *App) loadSqliteSettings() error {
 		if result.Key == data.DB_KEY_TWITCH_SONG_REQUEST_REWARD_ID {
 			a.songRequestRewardID = result.Value
 		}
+		if result.Key == data.DB_KEY_TWITCH_ACCESS_TOKEN_BOT {
+			a.twitchDataStructBot.accessToken = result.Value
+		}
 	}
 
 	if a.twitchDataStruct.accessToken != "" {
@@ -66,6 +69,28 @@ func (a *App) loadSqliteSettings() error {
 			if err == nil && len(resp.Data.Streams) > 0 && resp.Data.Streams[0].ID != "" {
 				a.streamOnline = true
 			}
+		}
+	}
+
+	if a.twitchDataStructBot.accessToken != "" {
+		isValid, response, err := a.helixBot.ValidateToken(a.twitchDataStructBot.accessToken)
+		if err != nil {
+			// req error
+			return err
+		}
+		if response.StatusCode == http.StatusOK && isValid {
+			expiresIn := response.Data.ExpiresIn
+			strDate := response.Header.Get("Date")
+			t, err := time.Parse(data.TWITCH_SERVER_DATE_LAYOUT, strDate)
+			if err != nil {
+				return errors.New("Failed to validate server date time expiry, original error:\n" + err.Error())
+			}
+			t = t.Add(time.Duration(expiresIn) * time.Second)
+			a.helixBot.SetUserAccessToken(a.twitchDataStructBot.accessToken)
+			a.twitchDataStructBot.expiresDate = t
+			a.twitchDataStructBot.isAuthenticated = true
+			a.twitchDataStructBot.userID = response.Data.UserID
+			a.twitchDataStructBot.login = response.Data.Login
 		}
 	}
 

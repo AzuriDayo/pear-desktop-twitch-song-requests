@@ -25,22 +25,22 @@ func (a *App) handleAppWs(c echo.Context) error {
 		// Send initial info
 		// only login and expiry date
 		expiryDate := ""
-		if a.twitchDataStruct.login != "" {
+		if a.twitchDataStruct.isAuthenticated {
 			expiryDate = a.twitchDataStruct.expiresDate.Local().Format(data.TWITCH_SERVER_DATE_LAYOUT)
 		}
 
 		expiryDateBot := ""
-		if a.twitchDataStructBot.login != "" {
-			expiryDate = a.twitchDataStructBot.expiresDate.Local().Format(data.TWITCH_SERVER_DATE_LAYOUT)
+		if a.twitchDataStructBot.isAuthenticated {
+			expiryDateBot = a.twitchDataStructBot.expiresDate.Local().Format(data.TWITCH_SERVER_DATE_LAYOUT)
 		}
 
 		infoOnConnect, _ := json.Marshal(echo.Map{
 			"type":            "TWITCH_INFO",
-			"login":           a.twitchDataStruct.login,
-			"expiry_date":     expiryDate,
 			"stream_online":   a.streamOnline,
 			"reward_id":       a.songRequestRewardID,
+			"login":           a.twitchDataStruct.login,
 			"login_bot":       a.twitchDataStructBot.login,
+			"expiry_date":     expiryDate,
 			"expiry_date_bot": expiryDateBot,
 		})
 		err := websocket.Message.Send(ws, string(infoOnConnect))

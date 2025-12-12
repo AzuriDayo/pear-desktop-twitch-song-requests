@@ -16,15 +16,11 @@ function ConnectWithTwitchEntry(props: { forBot: boolean }) {
 			"redirect_uri",
 			"http://" + window.location.host + "/oauth/twitch",
 		);
-		params.append(
-			"scope",
-			[
-				"channel:read:redemptions",
-				"user:read:chat",
-				"user:write:chat",
-				"user:bot",
-			].join(" "),
-		);
+		const scopes = ["user:read:chat", "user:write:chat", "user:bot"];
+		if (!props.forBot) {
+			scopes.push("channel:read:redemptions");
+		}
+		params.append("scope", scopes.join(" "));
 		if (props.forBot) {
 			params.append("state", "bot");
 		}

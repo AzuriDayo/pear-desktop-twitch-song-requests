@@ -19,10 +19,10 @@ export function Home() {
 						twitchState.expires_in}
 			</h3>
 			<br />
-			<Link to="/oauth/twitch-connect">
+			<Link to="/oauth/twitch-connect-bot">
 				{twitchState.expires_in !== ""
-					? "Refresh Twitch token"
-					: "Connect with twitch"}
+					? "Refresh Twitch bot token"
+					: "Connect twitch bot account"}
 			</Link>
 			<h3>
 				{twitchState.expires_in_bot == ""
