@@ -63,7 +63,7 @@ func (a *App) SetSubscriptionHandlers() {
 		}
 
 		log.Printf("Chat message from %s: %s %s\n", event.ChatterUserLogin, event.Message.Text, event.ChannelPointsCustomRewardId)
-		if a.songRequestRewardID == event.ChannelPointsCustomRewardId || (strings.HasPrefix(event.Message.Text, "!sr ") && isSub) {
+		if a.songRequestRewardID == event.ChannelPointsCustomRewardId || (isSub && len(event.Message.Text) > 4 && strings.EqualFold(event.Message.Text[:4], "!sr ")) {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
@@ -71,7 +71,7 @@ func (a *App) SetSubscriptionHandlers() {
 			return
 		}
 
-		if strings.HasPrefix(event.Message.Text, "!skip") && isModerator {
+		if strings.EqualFold(event.Message.Text, "!skip") && isModerator {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
@@ -101,7 +101,7 @@ func (a *App) SetSubscriptionHandlers() {
 			return
 		}
 
-		if strings.HasPrefix(event.Message.Text, "!song") {
+		if strings.EqualFold(event.Message.Text, "!song") {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
@@ -148,7 +148,7 @@ func (a *App) SetSubscriptionHandlers() {
 			return
 		}
 
-		if strings.HasPrefix(event.Message.Text, "!queue") {
+		if strings.EqualFold(event.Message.Text, "!queue") {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}

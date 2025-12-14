@@ -8,26 +8,9 @@ on:
 
 jobs:
   build-and-publish:
-    runs-on: ${{ matrix.os.label }}
-    strategy:
-      matrix:
-        os:
-          - name: linux
-            label: ubuntu-latest
-            arch: amd64
-          - name: linux
-            label: ubuntu-24.04-arm
-            arch: arm64
-          - name: darwin
-            label: macos-latest
-            arch: amd64
-          - name: darwin
-            label: macos-latest
-            arch: arm64
-          - name: windows
-            label: windows-latest
-            arch: amd64
-
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v4
@@ -44,34 +27,28 @@ jobs:
           pnpm -r build
           rm -rf cmd/main/build
           cp -r control-panel/build cmd/main
-          execname=pear-desktop-twitch-song-requests_${{ matrix.os.name }}_${{ matrix.os.arch }}
-          if [ "${{ matrix.os.name }}" = 'windows' ]; then execname="${execname}.exe"; fi
-          CGO_ENABLED=1 GOOS=${{ matrix.os.name }} GOARCH=${{ matrix.os.arch }} go build -ldflags="-s -w" -trimpath -o "$execname" cmd/main/*.go
+          ./build_dist.sh
+        # execname=pear-desktop-twitch-song-requests_${{ matrix.os.name }}_${{ matrix.os.arch }}
+        # if [ "${{ matrix.os.name }}" = 'windows' ]; then execname="${execname}.exe"; fi
+        # CGO_ENABLED=0 GOOS=${{ matrix.os.name }} GOARCH=${{ matrix.os.arch }} go build -ldflags="-s -w" -trimpath -o "$execname" cmd/main/*.go
       - uses: actions/upload-artifact@v4
+        if: github.ref_type != 'tag'
         with:
           name: pear-desktop-twitch-song-requests_${{ matrix.os.name }}_${{ matrix.os.arch }}
           path: pear-desktop-twitch-song-requests_*
-  publish:
-    permissions:
-      contents: write
-    runs-on: ubuntu-latest
-    needs:
-      - build-and-publish
-    if: github.ref_type == 'tag'
-    steps:
-      - uses: actions/download-artifact@v5
-        with:
-          merge-multiple: true
       - id: version-tag-ref
+        if: github.ref_type == 'tag'
         run: |
           ref="${{ github.ref }}"
           mv pear-desktop-twitch-song-requests_linux_amd64 pear-desktop-twitch-song-requests_linux_amd64-${ref#refs/tags/}
           mv pear-desktop-twitch-song-requests_linux_arm64 pear-desktop-twitch-song-requests_linux_arm64-${ref#refs/tags/}
           mv pear-desktop-twitch-song-requests_windows_amd64.exe pear-desktop-twitch-song-requests_windows_amd64-${ref#refs/tags/}.exe
+          mv pear-desktop-twitch-song-requests_windows_arm64.exe pear-desktop-twitch-song-requests_windows_arm64-${ref#refs/tags/}.exe
           mv pear-desktop-twitch-song-requests_darwin_amd64 pear-desktop-twitch-song-requests_darwin_amd64-${ref#refs/tags/}
           mv pear-desktop-twitch-song-requests_darwin_arm64 pear-desktop-twitch-song-requests_darwin_arm64-${ref#refs/tags/}
           echo "ref=${ref#refs/tags/}" >>"$GITHUB_OUTPUT"
       - uses: softprops/action-gh-release@v2
+        if: github.ref_type == 'tag'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -83,6 +60,7 @@ jobs:
           fail_on_unmatched_files: true
           files: |
             pear-desktop-twitch-song-requests_windows_amd64-${{ steps.version-tag-ref.outputs.ref }}.exe
+            pear-desktop-twitch-song-requests_windows_arm64-${{ steps.version-tag-ref.outputs.ref }}.exe
             pear-desktop-twitch-song-requests_linux_amd64-${{ steps.version-tag-ref.outputs.ref }}
             pear-desktop-twitch-song-requests_linux_arm64-${{ steps.version-tag-ref.outputs.ref }}
             pear-desktop-twitch-song-requests_darwin_amd64-${{ steps.version-tag-ref.outputs.ref }}
