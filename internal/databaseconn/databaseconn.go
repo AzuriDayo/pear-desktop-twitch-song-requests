@@ -7,8 +7,9 @@ import (
 
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/data"
 	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/sqlite3"
+	_ "github.com/golang-migrate/migrate/v4/database/sqlite"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
+	_ "modernc.org/sqlite"
 )
 
 const dbName = "pear-desktop-twitch-song-requests.db"
@@ -26,7 +27,7 @@ func init() {
 }
 
 func NewDBConnection() (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", "file:"+dbName)
+	db, err := sql.Open("sqlite", "file:"+dbName)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +41,7 @@ func getMigrator() (*migrate.Migrate, error) {
 	if err != nil {
 		return nil, err
 	}
-	m, err = migrate.NewWithSourceInstance("iofs", d, "sqlite3://"+dbName)
+	m, err = migrate.NewWithSourceInstance("iofs", d, "sqlite://"+dbName)
 	if err != nil {
 		return nil, err
 	}
