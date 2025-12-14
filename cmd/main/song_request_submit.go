@@ -24,11 +24,11 @@ func (a *App) songRequestSubmit(useProperHelix *helix.Client, properUserID strin
 			PlaylistPanelVideoRenderer struct {
 				VideoId         string `json:"videoId"`
 				Selected        bool   `json:"selected"`
-				ShortByLineText struct {
+				ShortBylineText struct {
 					Runs []struct {
 						Text string `json:"text"`
 					} `json:"runs"`
-				} `json:"shortByLineText"`
+				} `json:"shortBylineText"`
 				Title struct {
 					Runs []struct {
 						Text string `json:"text"`

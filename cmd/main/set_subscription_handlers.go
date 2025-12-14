@@ -158,11 +158,11 @@ func (a *App) SetSubscriptionHandlers() {
 					PlaylistPanelVideoRenderer struct {
 						VideoId         string `json:"videoId"`
 						Selected        bool   `json:"selected"`
-						ShortByLineText struct {
+						ShortBylineText struct {
 							Runs []struct {
 								Text string `json:"text"`
 							} `json:"runs"`
-						} `json:"shortByLineText"`
+						} `json:"shortBylineText"`
 						// LongBylineText struct {
 						// 	Runs []struct {
 						// 		Text string `json:"text"`
@@ -222,7 +222,7 @@ func (a *App) SetSubscriptionHandlers() {
 					}
 					n++
 					title := v.PlaylistPanelVideoRenderer.Title.Runs[0].Text
-					artist := v.PlaylistPanelVideoRenderer.ShortByLineText.Runs[0].Text
+					artist := v.PlaylistPanelVideoRenderer.ShortBylineText.Runs[0].Text
 					sl := "#" + strconv.Itoa(n-1) + ": " + title + " - " + artist + ", "
 					if n == 1 {
 						sl = strings.TrimPrefix(sl, "#"+strconv.Itoa(n-1)+": ")
