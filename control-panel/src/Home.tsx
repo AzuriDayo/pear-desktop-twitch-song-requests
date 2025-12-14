@@ -20,12 +20,12 @@ export function Home() {
 			</h3>
 			<br />
 			<Link to="/oauth/twitch-connect-bot">
-				{twitchState.expires_in !== ""
+				{twitchState.login_bot !== ""
 					? "Refresh Twitch bot token"
 					: "Connect twitch bot account"}
 			</Link>
 			<h3>
-				{twitchState.login_bot == ""
+				{twitchState.expires_in_bot == ""
 					? "No bot Twitch token configured"
 					: "Twitch token for " +
 						twitchState.login_bot +
