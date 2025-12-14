@@ -125,11 +125,11 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, event twitch.Event
 			PlaylistPanelVideoRenderer struct {
 				VideoId         string `json:"videoId"`
 				Selected        bool   `json:"selected"`
-				ShortByLineText struct {
+				ShortBylineText struct {
 					Runs []struct {
 						Text string `json:"text"`
 					} `json:"runs"`
-				} `json:"shortByLineText"`
+				} `json:"shortBylineText"`
 				Title struct {
 					Runs []struct {
 						Text string `json:"text"`
@@ -260,11 +260,11 @@ func (a *App) safeLockMutexWaitForSongEnds(underTimeInSeconds int) {
 				PlaylistPanelVideoRenderer struct {
 					VideoId         string `json:"videoId"`
 					Selected        bool   `json:"selected"`
-					ShortByLineText struct {
+					ShortBylineText struct {
 						Runs []struct {
 							Text string `json:"text"`
 						} `json:"runs"`
-					} `json:"shortByLineText"`
+					} `json:"shortBylineText"`
 					Title struct {
 						Runs []struct {
 							Text string `json:"text"`
