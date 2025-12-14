@@ -153,29 +153,7 @@ func (a *App) SetSubscriptionHandlers() {
 				return
 			}
 			failed := false
-			queue := struct {
-				Items []struct {
-					PlaylistPanelVideoRenderer struct {
-						VideoId         string `json:"videoId"`
-						Selected        bool   `json:"selected"`
-						ShortBylineText struct {
-							Runs []struct {
-								Text string `json:"text"`
-							} `json:"runs"`
-						} `json:"shortBylineText"`
-						// LongBylineText struct {
-						// 	Runs []struct {
-						// 		Text string `json:"text"`
-						// 	} `json:"runs"`
-						// } `json:"longBylineText"`
-						Title struct {
-							Runs []struct {
-								Text string `json:"text"`
-							} `json:"runs"`
-						} `json:"title"`
-					} `json:"playlistPanelVideoRenderer"`
-				} `json:"items"`
-			}{}
+			queue := songrequests.QueueResponse{}
 			var rootErr error = nil
 			queueCmdMutex.Lock()
 			if time.Now().After(lastUsedQueueCmd.Add(time.Second * -10)) {
@@ -211,6 +189,9 @@ func (a *App) SetSubscriptionHandlers() {
 				n := 0
 				foundSelected := false
 				for _, v := range queue.Items {
+					if v.PlaylistPanelVideoRenderer == nil {
+						continue
+					}
 					if v.PlaylistPanelVideoRenderer.Selected {
 						foundSelected = true
 					}

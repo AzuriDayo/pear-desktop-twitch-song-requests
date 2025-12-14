@@ -120,29 +120,7 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, event twitch.Event
 
 	// Fetch new q details
 	// Get q info
-	queue := struct {
-		Items []struct {
-			PlaylistPanelVideoRenderer struct {
-				VideoId         string `json:"videoId"`
-				Selected        bool   `json:"selected"`
-				ShortBylineText struct {
-					Runs []struct {
-						Text string `json:"text"`
-					} `json:"runs"`
-				} `json:"shortBylineText"`
-				Title struct {
-					Runs []struct {
-						Text string `json:"text"`
-					} `json:"runs"`
-				} `json:"title"`
-				NavigationEndpoint struct {
-					WatchEndpoint struct {
-						Index int `json:"index"`
-					} `json:"watchEndpoint"`
-				} `json:"navigationEndpoint"`
-			} `json:"playlistPanelVideoRenderer"`
-		} `json:"items"`
-	}{}
+	queue := songrequests.QueueResponse{}
 
 	timeout := time.After(time.Second * 10)
 OuterLoop:
@@ -193,6 +171,9 @@ OuterLoop:
 			addedSongIndex = -1
 			afterVideoIndex = -1
 			for i, v := range queue.Items {
+				if v.PlaylistPanelVideoRenderer == nil {
+					continue
+				}
 				if v.PlaylistPanelVideoRenderer.Selected {
 					nowIndex = i
 				}
@@ -255,29 +236,7 @@ func (a *App) safeLockMutexWaitForSongEnds(underTimeInSeconds int) {
 		currentVideoId := playerInfo.Song.VideoId
 		// This unlock relock allows for <1s remaining time check
 
-		queue := struct {
-			Items []struct {
-				PlaylistPanelVideoRenderer struct {
-					VideoId         string `json:"videoId"`
-					Selected        bool   `json:"selected"`
-					ShortBylineText struct {
-						Runs []struct {
-							Text string `json:"text"`
-						} `json:"runs"`
-					} `json:"shortBylineText"`
-					Title struct {
-						Runs []struct {
-							Text string `json:"text"`
-						} `json:"runs"`
-					} `json:"title"`
-					NavigationEndpoint struct {
-						WatchEndpoint struct {
-							Index int `json:"index"`
-						} `json:"watchEndpoint"`
-					} `json:"navigationEndpoint"`
-				} `json:"playlistPanelVideoRenderer"`
-			} `json:"items"`
-		}{}
+		queue := songrequests.QueueResponse{}
 		timeout := time.After(time.Duration(underTimeInSeconds+10) * time.Second) // give extra 10 seconds buffer in case of api delay
 		for {
 			time.Sleep(200 * time.Millisecond)
@@ -301,6 +260,9 @@ func (a *App) safeLockMutexWaitForSongEnds(underTimeInSeconds int) {
 				}
 
 				for _, v := range queue.Items {
+					if v.PlaylistPanelVideoRenderer == nil {
+						continue
+					}
 					if v.PlaylistPanelVideoRenderer.Selected && v.PlaylistPanelVideoRenderer.VideoId != currentVideoId {
 						shouldBreak = true
 						break

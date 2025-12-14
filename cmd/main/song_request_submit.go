@@ -19,29 +19,7 @@ func (a *App) songRequestSubmit(useProperHelix *helix.Client, properUserID strin
 	}
 
 	// Loop through queue state to check if song is queued already
-	queue := struct {
-		Items []struct {
-			PlaylistPanelVideoRenderer struct {
-				VideoId         string `json:"videoId"`
-				Selected        bool   `json:"selected"`
-				ShortBylineText struct {
-					Runs []struct {
-						Text string `json:"text"`
-					} `json:"runs"`
-				} `json:"shortBylineText"`
-				Title struct {
-					Runs []struct {
-						Text string `json:"text"`
-					} `json:"runs"`
-				} `json:"title"`
-				NavigationEndpoint struct {
-					WatchEndpoint struct {
-						Index int `json:"index"`
-					} `json:"watchEndpoint"`
-				} `json:"navigationEndpoint"`
-			} `json:"playlistPanelVideoRenderer"`
-		} `json:"items"`
-	}{}
+	queue := songrequests.QueueResponse{}
 
 	preResponse, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/queue")
 	if err != nil || preResponse.StatusCode != http.StatusOK {
@@ -84,6 +62,9 @@ func (a *App) songRequestSubmit(useProperHelix *helix.Client, properUserID strin
 	afterSelected := false
 	songExistsInQueue := false
 	for _, v := range queue.Items {
+		if v.PlaylistPanelVideoRenderer == nil {
+			continue
+		}
 		if v.PlaylistPanelVideoRenderer.Selected {
 			afterSelected = true
 		}
