@@ -222,8 +222,8 @@ func (a *App) SetSubscriptionHandlersBot() {
 				n := 0
 				foundSelected := false
 				for _, v := range queue.Items {
-					if v.PlaylistPanelVideoRenderer == nil {
-						continue
+					if v.PlaylistPanelVideoWrapperRenderer != nil {
+						v.PlaylistPanelVideoRenderer = &v.PlaylistPanelVideoWrapperRenderer.PrimaryRenderer.PlaylistPanelVideoRenderer
 					}
 					if v.PlaylistPanelVideoRenderer.Selected {
 						foundSelected = true

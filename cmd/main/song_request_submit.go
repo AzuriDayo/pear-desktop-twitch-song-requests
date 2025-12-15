@@ -62,8 +62,8 @@ func (a *App) songRequestSubmit(useProperHelix *helix.Client, properUserID strin
 	afterSelected := false
 	songExistsInQueue := false
 	for _, v := range queue.Items {
-		if v.PlaylistPanelVideoRenderer == nil {
-			continue
+		if v.PlaylistPanelVideoWrapperRenderer != nil {
+			v.PlaylistPanelVideoRenderer = &v.PlaylistPanelVideoWrapperRenderer.PrimaryRenderer.PlaylistPanelVideoRenderer
 		}
 		if v.PlaylistPanelVideoRenderer.Selected {
 			afterSelected = true

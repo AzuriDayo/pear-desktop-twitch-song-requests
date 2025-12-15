@@ -171,8 +171,8 @@ OuterLoop:
 			addedSongIndex = -1
 			afterVideoIndex = -1
 			for i, v := range queue.Items {
-				if v.PlaylistPanelVideoRenderer == nil {
-					continue
+				if v.PlaylistPanelVideoWrapperRenderer != nil {
+					v.PlaylistPanelVideoRenderer = &v.PlaylistPanelVideoWrapperRenderer.PrimaryRenderer.PlaylistPanelVideoRenderer
 				}
 				if v.PlaylistPanelVideoRenderer.Selected {
 					nowIndex = i
@@ -260,8 +260,8 @@ func (a *App) safeLockMutexWaitForSongEnds(underTimeInSeconds int) {
 				}
 
 				for _, v := range queue.Items {
-					if v.PlaylistPanelVideoRenderer == nil {
-						continue
+					if v.PlaylistPanelVideoWrapperRenderer != nil {
+						v.PlaylistPanelVideoRenderer = &v.PlaylistPanelVideoWrapperRenderer.PrimaryRenderer.PlaylistPanelVideoRenderer
 					}
 					if v.PlaylistPanelVideoRenderer.Selected && v.PlaylistPanelVideoRenderer.VideoId != currentVideoId {
 						shouldBreak = true
