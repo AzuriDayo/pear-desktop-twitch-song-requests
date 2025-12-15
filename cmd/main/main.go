@@ -151,7 +151,7 @@ func (a *App) Run() error {
 						// graceful shutdown
 						return
 					}
-					log.Println("Twitch WS disconnected, attempt to reconnect")
+					log.Println("Twitch WS MAIN disconnected, attempt to reconnect")
 				}
 				// always sleep 5s after token validation
 				time.Sleep(5 * time.Second)
@@ -173,7 +173,7 @@ func (a *App) Run() error {
 						// graceful shutdown
 						return
 					}
-					log.Println("Twitch WS disconnected, attempt to reconnect")
+					log.Println("Twitch WS BOT disconnected, attempt to reconnect")
 				}
 				// always sleep 5s after token validation
 				time.Sleep(5 * time.Second)
@@ -235,7 +235,7 @@ func (a *App) Run() error {
 	args = append(args, "http://localhost:3999/") // must use localhost here because twitch does not allow 127.0.0.1
 	twitchTokenExpiresSoon := a.twitchDataStruct.isAuthenticated && time.Now().Add(-15*24*time.Hour).After(a.twitchDataStruct.expiresDate)
 	if a.twitchDataStruct.isAuthenticated && twitchTokenExpiresSoon {
-		log.Println("ALERT! Token expiry is soon, consider refreshing token.")
+		log.Println("ALERT! Main account Token expiry is soon, consider refreshing token.")
 	}
 	twitchTokenBotExpiresSoon := a.twitchDataStructBot.isAuthenticated && time.Now().Add(-15*24*time.Hour).After(a.twitchDataStructBot.expiresDate)
 	if a.twitchDataStructBot.isAuthenticated && twitchTokenBotExpiresSoon {

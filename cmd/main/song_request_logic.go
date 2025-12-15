@@ -7,6 +7,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -86,11 +88,6 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, event twitch.Event
 		song:        *song,
 	})
 
-	log.Println("Internal queue:")
-	for i, v := range songQueue {
-		log.Println(i+1, v.song.Title, v.song.Artist)
-	}
-
 	// save to history
 	go func() {
 		db, err := databaseconn.NewDBConnection()
@@ -130,7 +127,6 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, event twitch.Event
 	triedTooManyTimes := make(chan struct{}, 1)
 	tries := 0
 	const maxAttempts = 15
-	log.Println("afterVideoId", afterVideoId)
 OuterLoop:
 	for {
 		time.Sleep(time.Millisecond * 500)
@@ -213,6 +209,13 @@ OuterLoop:
 
 	// get song index & drag song down to wherever is needed
 	if addedSongIndex == -1 || afterVideoIndex == -1 {
+		fpath := "info_dumps"
+		fname := filepath.Join(fpath, "queue"+strings.ReplaceAll(strings.ReplaceAll(time.Now().Format(time.DateTime), ":", "-"), " ", "-")+".json")
+		qd, _ := json.Marshal(queue)
+		err := os.MkdirAll(fpath, os.ModePerm)
+		if err == nil {
+			os.WriteFile(fname, qd, 0644)
+		}
 		useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
 			BroadcasterID:        event.BroadcasterUserId,
 			SenderID:             properUserID,

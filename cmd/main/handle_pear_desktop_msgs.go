@@ -129,21 +129,14 @@ func (a *App) handlePearDesktopMsgs() {
 								}
 							}
 							// recover success
-							log.Println(toId-fromId, "Recovery successful, internal queue maintained")
+							log.Println("Recovery successful, internal queue maintained")
 						} else {
-							log.Println("Recovery unsuccessful, internal queue is wiped")
+							log.Println("Recovery unsuccessful, internal queue is wiped, but your queue in ytm is intact")
 						}
 					} else {
 						if len(songQueue) > 0 {
 							songQueue = songQueue[1:]
 						}
-					}
-					log.Println("Internal queue:")
-					for i, v := range songQueue {
-						log.Println(i+1, v.song.Title, v.song.Artist)
-					}
-					if len(songQueue) == 0 {
-						log.Println("emtpy")
 					}
 				}
 				songQueueMutex.Unlock()

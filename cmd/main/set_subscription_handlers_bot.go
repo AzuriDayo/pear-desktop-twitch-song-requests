@@ -196,7 +196,6 @@ func (a *App) SetSubscriptionHandlersBot() {
 			var rootErr error = nil
 			queueCmdMutexBot.Lock()
 			if !time.Now().After(lastUsedQueueCmdBot.Add(time.Second * 10)) {
-				log.Println("Used !queue too early bot")
 				queueCmdMutexBot.Unlock()
 				return
 			}
