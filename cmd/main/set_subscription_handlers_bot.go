@@ -30,6 +30,8 @@ func (a *App) SetSubscriptionHandlersBot() {
 		useProperHelix := a.helixBot
 		properUserID := a.twitchDataStructBot.userID
 		realBroadcasterID := a.twitchDataStruct.userID
+		trimmedText := strings.TrimSpace(event.Message.Text)
+		trimmedText = strings.Trim(trimmedText, " ͏") // idk why twitch adds this character
 
 		if strings.EqualFold(event.ChatterUserLogin, a.twitchDataStruct.login) {
 			isSub = true
@@ -97,14 +99,14 @@ func (a *App) SetSubscriptionHandlersBot() {
 			}
 		}
 
-		if isSub && len(event.Message.Text) > 4 && strings.ToLower(event.Message.Text[:4]) == "!sr " {
+		if isSub && len(trimmedText) > 4 && strings.ToLower(trimmedText[:4]) == "!sr " {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
 			a.songRequestSubmit(useProperHelix, properUserID, event)
 		}
 
-		if strings.ToLower(event.Message.Text) == "!skip" && isModerator {
+		if strings.ToLower(trimmedText) == "!skip" && isModerator {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
@@ -114,8 +116,8 @@ func (a *App) SetSubscriptionHandlersBot() {
 				hasSkipped = true
 				songQueueMutex.Lock()
 				http.Post("http://"+songrequests.GetPearDesktopHost()+"/api/v1/next", "application/json", nil)
-				songQueueMutex.Unlock()
 				lastSkipped = time.Now()
+				songQueueMutex.Unlock()
 			}
 			skipMutex.Unlock()
 			if hasSkipped {
@@ -134,7 +136,7 @@ func (a *App) SetSubscriptionHandlersBot() {
 			return
 		}
 
-		if strings.ToLower(event.Message.Text) == "!song" {
+		if strings.ToLower(trimmedText) == "!song" {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
@@ -142,12 +144,12 @@ func (a *App) SetSubscriptionHandlersBot() {
 			song := songrequests.SongResult{}
 			var rootErr error = nil
 			currentSongMutexBot.Lock()
-			if !time.Now().After(lastUsedCurrentSongBot.Add(time.Second * -10)) {
+			if !time.Now().After(lastUsedCurrentSongBot.Add(time.Second * 10)) {
 				currentSongMutexBot.Unlock()
 				return
 			}
-			currentSongMutexBot.Unlock()
 			lastUsedCurrentSongBot = time.Now()
+			currentSongMutexBot.Unlock()
 
 			resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/song")
 			if err == nil {
@@ -185,7 +187,7 @@ func (a *App) SetSubscriptionHandlersBot() {
 			return
 		}
 
-		if strings.ToLower(event.Message.Text) == "!queue" {
+		if strings.ToLower(trimmedText) == "!queue" {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
@@ -193,12 +195,13 @@ func (a *App) SetSubscriptionHandlersBot() {
 			queue := songrequests.QueueResponse{}
 			var rootErr error = nil
 			queueCmdMutexBot.Lock()
-			if !time.Now().After(lastUsedQueueCmdBot.Add(time.Second * -10)) {
+			if !time.Now().After(lastUsedQueueCmdBot.Add(time.Second * 10)) {
+				log.Println("Used !queue too early bot")
 				queueCmdMutexBot.Unlock()
 				return
 			}
-			queueCmdMutexBot.Unlock()
 			lastUsedQueueCmdBot = time.Now()
+			queueCmdMutexBot.Unlock()
 
 			resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/queue")
 			if err == nil {
