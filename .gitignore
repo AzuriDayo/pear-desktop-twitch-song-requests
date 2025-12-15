@@ -101,7 +101,8 @@ pear-desktop-twitch-song-requests.db
 /pear-desktop-twitch-song-requests_linux_*
 /pear-desktop-twitch-song-requests_darwin_*
 /pear-desktop-twitch-song-requests_windows_*
-local-run-debug.sh
+local-*.sh
 __debug_bin*
 sqlite3*
 .vscode/launch.json
+cmd/main/build

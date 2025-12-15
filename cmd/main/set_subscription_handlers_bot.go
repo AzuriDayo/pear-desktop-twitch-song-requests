@@ -97,14 +97,14 @@ func (a *App) SetSubscriptionHandlersBot() {
 			}
 		}
 
-		if isSub && len(event.Message.Text) > 4 && strings.EqualFold(event.Message.Text[:4], "!sr ") {
+		if isSub && len(event.Message.Text) > 4 && strings.ToLower(event.Message.Text[:4]) == "!sr " {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
 			a.songRequestSubmit(useProperHelix, properUserID, event)
 		}
 
-		if strings.EqualFold(event.Message.Text, "!skip") && isModerator {
+		if strings.ToLower(event.Message.Text) == "!skip" && isModerator {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
@@ -134,7 +134,7 @@ func (a *App) SetSubscriptionHandlersBot() {
 			return
 		}
 
-		if strings.EqualFold(event.Message.Text, "!song") {
+		if strings.ToLower(event.Message.Text) == "!song" {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
@@ -181,7 +181,7 @@ func (a *App) SetSubscriptionHandlersBot() {
 			return
 		}
 
-		if strings.EqualFold(event.Message.Text, "!queue") {
+		if strings.ToLower(event.Message.Text) == "!queue" {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
