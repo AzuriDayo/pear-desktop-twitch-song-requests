@@ -86,6 +86,11 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, event twitch.Event
 		song:        *song,
 	})
 
+	log.Println("Internal queue:")
+	for i, v := range songQueue {
+		log.Println(i+1, v.song.Title, v.song.Artist)
+	}
+
 	// save to history
 	go func() {
 		db, err := databaseconn.NewDBConnection()
@@ -216,6 +221,8 @@ OuterLoop:
 		})
 		return
 	}
+
+	// Drag song into the right order
 	if afterVideoIndex+1 == addedSongIndex {
 		// do not move anything
 		return
