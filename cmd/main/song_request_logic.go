@@ -198,11 +198,11 @@ OuterLoop:
 					break
 				}
 			}
-			if nowIndex != -1 && addedSongIndex != -1 && afterVideoIndex != -1 {
-				log.Println("found index", addedSongIndex, afterVideoIndex)
+			if addedSongIndex != -1 && afterVideoIndex != -1 {
+				log.Println("found the following positions sr-added", addedSongIndex, "move-sr-to", afterVideoIndex)
 				break OuterLoop
 			}
-			log.Println("after loop index", addedSongIndex, afterVideoIndex)
+			log.Println("after loop sr-added", addedSongIndex, "move-sr-to", afterVideoIndex)
 		}
 	}
 
