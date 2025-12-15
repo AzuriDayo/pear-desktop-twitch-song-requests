@@ -142,26 +142,30 @@ func (a *App) SetSubscriptionHandlersBot() {
 			song := songrequests.SongResult{}
 			var rootErr error = nil
 			currentSongMutexBot.Lock()
-			if time.Now().After(lastUsedCurrentSongBot.Add(time.Second * -10)) {
-				lastUsedCurrentSongBot = time.Now()
-				resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/song")
+			if !time.Now().After(lastUsedCurrentSongBot.Add(time.Second * -10)) {
+				currentSongMutexBot.Unlock()
+				return
+			}
+			currentSongMutexBot.Unlock()
+			lastUsedCurrentSongBot = time.Now()
+
+			resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/song")
+			if err == nil {
+				bb, err := io.ReadAll(resp.Body)
 				if err == nil {
-					bb, err := io.ReadAll(resp.Body)
-					if err == nil {
-						rootErr = json.Unmarshal(bb, &song)
-						if rootErr != nil {
-							failed = true
-						}
-					} else {
+					rootErr = json.Unmarshal(bb, &song)
+					if rootErr != nil {
 						failed = true
-						rootErr = err
 					}
 				} else {
 					failed = true
 					rootErr = err
 				}
+			} else {
+				failed = true
+				rootErr = err
 			}
-			currentSongMutexBot.Unlock()
+
 			if failed {
 				log.Println("Failed to get song info from !song", rootErr)
 				a.helixBot.SendChatMessage(&helix.SendChatMessageParams{
@@ -189,26 +193,30 @@ func (a *App) SetSubscriptionHandlersBot() {
 			queue := songrequests.QueueResponse{}
 			var rootErr error = nil
 			queueCmdMutexBot.Lock()
-			if time.Now().After(lastUsedQueueCmdBot.Add(time.Second * -10)) {
-				lastUsedQueueCmdBot = time.Now()
-				resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/queue")
+			if !time.Now().After(lastUsedQueueCmdBot.Add(time.Second * -10)) {
+				queueCmdMutexBot.Unlock()
+				return
+			}
+			queueCmdMutexBot.Unlock()
+			lastUsedQueueCmdBot = time.Now()
+
+			resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/queue")
+			if err == nil {
+				bb, err := io.ReadAll(resp.Body)
 				if err == nil {
-					bb, err := io.ReadAll(resp.Body)
-					if err == nil {
-						rootErr = json.Unmarshal(bb, &queue)
-						if rootErr != nil {
-							failed = true
-						}
-					} else {
+					rootErr = json.Unmarshal(bb, &queue)
+					if rootErr != nil {
 						failed = true
-						rootErr = err
 					}
 				} else {
 					failed = true
 					rootErr = err
 				}
+			} else {
+				failed = true
+				rootErr = err
 			}
-			queueCmdMutexBot.Unlock()
+
 			if failed {
 				log.Println("Failed to get queue info from !queue", rootErr)
 				a.helixBot.SendChatMessage(&helix.SendChatMessageParams{
