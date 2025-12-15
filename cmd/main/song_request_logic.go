@@ -50,7 +50,7 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, event twitch.Event
 
 	b := echo.Map{
 		"videoId":        song.VideoID,
-		"insertPosition": "INSERT_AT_END",
+		"insertPosition": "INSERT_AFTER_CURRENT_VIDEO",
 	}
 	bb, _ := json.Marshal(b)
 	resp, err := http.Post("http://"+songrequests.GetPearDesktopHost()+"/api/v1/queue", "application/json", bytes.NewBuffer(bb))
@@ -71,6 +71,7 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, event twitch.Event
 		log.Println(event.ChatterUserLogin + ": Queued song " + song.Title + " - " + song.Artist)
 	}
 
+	nowIndex := -1
 	addedSongIndex := -1
 	afterVideoIndex := -1
 	afterVideoId := playerInfo.Song.VideoId
@@ -124,6 +125,7 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, event twitch.Event
 	triedTooManyTimes := make(chan struct{}, 1)
 	tries := 0
 	const maxAttempts = 15
+	log.Println("afterVideoId", afterVideoId)
 OuterLoop:
 	for {
 		time.Sleep(time.Millisecond * 500)
@@ -173,30 +175,34 @@ OuterLoop:
 				})
 				return
 			}
+			nowIndex = -1
 			addedSongIndex = -1
 			afterVideoIndex = -1
-			for i := len(queue.Items); i >= 0; i-- {
-				v := queue.Items[i]
+			for i, v := range queue.Items {
 				if v.PlaylistPanelVideoWrapperRenderer != nil {
 					v.PlaylistPanelVideoRenderer = &v.PlaylistPanelVideoWrapperRenderer.PrimaryRenderer.PlaylistPanelVideoRenderer
 				}
-				if v.PlaylistPanelVideoRenderer.VideoId == song.VideoID {
-					addedSongIndex = i
+				if v.PlaylistPanelVideoRenderer.Selected {
+					nowIndex = i
+				}
+				if nowIndex == -1 {
 					continue
 				}
-				if v.PlaylistPanelVideoRenderer.VideoId == afterVideoId {
+				if nowIndex != -1 && afterVideoId == v.PlaylistPanelVideoRenderer.VideoId {
 					afterVideoIndex = i
 				}
-				if addedSongIndex != -1 && afterVideoIndex == -1 {
-					break
+				if nowIndex != -1 && song.VideoID == v.PlaylistPanelVideoRenderer.VideoId {
+					addedSongIndex = i
 				}
-				if v.PlaylistPanelVideoRenderer.Selected {
+				if afterVideoIndex != -1 && addedSongIndex != -1 {
 					break
 				}
 			}
-			if addedSongIndex != -1 && afterVideoIndex != -1 {
+			if nowIndex != -1 && addedSongIndex != -1 && afterVideoIndex != -1 {
+				log.Println("found index", addedSongIndex, afterVideoIndex)
 				break OuterLoop
 			}
+			log.Println("after loop index", addedSongIndex, afterVideoIndex)
 		}
 	}
 
@@ -208,6 +214,10 @@ OuterLoop:
 			Message:              event.Broadcaster.BroadcasterUserLogin + " Failed to queue song in the right order. Must fix the song order manually!",
 			ReplyParentMessageID: event.MessageId,
 		})
+		return
+	}
+	if afterVideoIndex+1 == addedSongIndex {
+		// do not move anything
 		return
 	}
 	b2, _ := json.Marshal(echo.Map{

@@ -13,6 +13,11 @@ type QueueResponsePlaylistPanelVideoRenderer struct {
 			Text string `json:"text"`
 		} `json:"runs"`
 	} `json:"title"`
+	NavigationEndpoint struct {
+		WatchEndpoint struct {
+			Index int `json:"index"`
+		} `json:"watchEndpoint"`
+	} `json:"navigationEndpoint"`
 }
 
 type QueueResponse struct {
