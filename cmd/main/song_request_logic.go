@@ -4,9 +4,12 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -122,14 +125,21 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, event twitch.Event
 	// Get q info
 	queue := songrequests.QueueResponse{}
 
-	timeout := time.After(time.Second * 10)
+	triedTooManyTimes := make(chan struct{}, 1)
+	tries := 0
+	const maxAttempts = 15
 OuterLoop:
 	for {
 		time.Sleep(time.Millisecond * 500)
 		select {
-		case <-timeout:
+		case <-triedTooManyTimes:
 			break OuterLoop
 		default:
+			tries++
+			if tries > maxAttempts {
+				triedTooManyTimes <- struct{}{}
+				break
+			}
 			resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/queue")
 			if err != nil || resp.StatusCode != http.StatusOK {
 				emsg := "Internal error when checking if song is already in queue. Disregard previous message."
@@ -190,14 +200,22 @@ OuterLoop:
 					break
 				}
 			}
-			if nowIndex != -1 && addedSongIndex != -1 && afterVideoIndex != -1 {
+			if addedSongIndex != -1 && afterVideoIndex != -1 {
 				break OuterLoop
 			}
 		}
 	}
 
 	// get song index & drag song down to wherever is needed
-	if nowIndex == -1 || addedSongIndex == -1 || afterVideoIndex == -1 {
+	if addedSongIndex == -1 || afterVideoIndex == -1 {
+		fpath := "debug_dumps"
+		fname := fmt.Sprintf("queue_failed_%s_%s_%s.json", song.VideoID, strconv.Itoa(addedSongIndex), strconv.Itoa(afterVideoIndex))
+		fullpathname := filepath.Join(fpath, fname)
+		qd, _ := json.MarshalIndent(queue, "", "    ")
+		err := os.MkdirAll(fpath, os.ModePerm)
+		if err == nil {
+			os.WriteFile(fullpathname, qd, 0644)
+		}
 		useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
 			BroadcasterID:        event.BroadcasterUserId,
 			SenderID:             properUserID,

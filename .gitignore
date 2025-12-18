@@ -106,3 +106,4 @@ __debug_bin*
 sqlite3*
 .vscode/launch.json
 cmd/main/build
+debug_dumps
