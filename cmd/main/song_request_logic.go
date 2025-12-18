@@ -4,6 +4,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -200,21 +201,20 @@ OuterLoop:
 				}
 			}
 			if addedSongIndex != -1 && afterVideoIndex != -1 {
-				log.Println("found the following positions sr-added", addedSongIndex, "move-sr-to", afterVideoIndex)
 				break OuterLoop
 			}
-			log.Println("after loop sr-added", addedSongIndex, "move-sr-to", afterVideoIndex)
 		}
 	}
 
 	// get song index & drag song down to wherever is needed
 	if addedSongIndex == -1 || afterVideoIndex == -1 {
-		fpath := "info_dumps"
-		fname := filepath.Join(fpath, "queue"+strings.ReplaceAll(strings.ReplaceAll(time.Now().Format(time.DateTime), ":", "-"), " ", "-")+".json")
-		qd, _ := json.Marshal(queue)
+		fpath := "debug_dumps"
+		fname := fmt.Sprintf("queue_failed_%s_%s_%s.json", song.VideoID, strconv.Itoa(addedSongIndex), strconv.Itoa(afterVideoIndex))
+		fullpathname := filepath.Join(fpath, fname)
+		qd, _ := json.MarshalIndent(queue, "", "    ")
 		err := os.MkdirAll(fpath, os.ModePerm)
 		if err == nil {
-			os.WriteFile(fname, qd, 0644)
+			os.WriteFile(fullpathname, qd, 0644)
 		}
 		useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
 			BroadcasterID:        event.BroadcasterUserId,
