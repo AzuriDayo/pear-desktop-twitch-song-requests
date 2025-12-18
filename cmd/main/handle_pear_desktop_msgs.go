@@ -65,6 +65,11 @@ func (a *App) handlePearDesktopMsgs() {
 									PrimaryRenderer struct {
 										PlaylistPanelVideoRenderer songrequests.QueueResponsePlaylistPanelVideoRenderer `json:"playlistPanelVideoRenderer"`
 									} `json:"primaryRenderer"`
+									Counterpart []struct {
+										CounterpartRenderer struct {
+											PlaylistPanelVideoRenderer songrequests.QueueResponsePlaylistPanelVideoRenderer `json:"playlistPanelVideoRenderer"`
+										} `json:"counterpartRenderer"`
+									} `json:"counterpart"`
 								} `json:"playlistPanelVideoWrapperRenderer"`
 							}{},
 						}
