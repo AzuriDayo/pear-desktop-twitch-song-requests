@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"slices"
 
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/songrequests"
 	"github.com/valyala/fastjson"
@@ -97,13 +98,27 @@ func (a *App) handlePearDesktopMsgs() {
 						fromId := -1
 						toId := -1
 						for i := len(queue.Items) - 1; i >= 0; i-- {
+							selected := false
+							compareVideoIDs := []string{}
 							if queue.Items[i].PlaylistPanelVideoWrapperRenderer != nil {
-								queue.Items[i].PlaylistPanelVideoRenderer = &queue.Items[i].PlaylistPanelVideoWrapperRenderer.PrimaryRenderer.PlaylistPanelVideoRenderer
+								compareVideoIDs = append(compareVideoIDs, queue.Items[i].PlaylistPanelVideoWrapperRenderer.PrimaryRenderer.PlaylistPanelVideoRenderer.VideoId)
+								if queue.Items[i].PlaylistPanelVideoWrapperRenderer.PrimaryRenderer.PlaylistPanelVideoRenderer.Selected {
+									selected = true
+								}
+								for _, v2 := range queue.Items[i].PlaylistPanelVideoWrapperRenderer.Counterpart {
+									compareVideoIDs = append(compareVideoIDs, v2.CounterpartRenderer.PlaylistPanelVideoRenderer.VideoId)
+								}
 							}
-							if queue.Items[i].PlaylistPanelVideoRenderer.Selected {
+							if queue.Items[i].PlaylistPanelVideoRenderer != nil {
+								compareVideoIDs = append(compareVideoIDs, queue.Items[i].PlaylistPanelVideoRenderer.VideoId)
+								if queue.Items[i].PlaylistPanelVideoRenderer.Selected {
+									selected = true
+								}
+							}
+							if selected {
 								fromId = i
 							}
-							if queue.Items[i].PlaylistPanelVideoRenderer.VideoId == recoverVideoId {
+							if slices.Contains(compareVideoIDs, recoverVideoId) {
 								toId = i
 							}
 							if fromId != -1 && toId != -1 {

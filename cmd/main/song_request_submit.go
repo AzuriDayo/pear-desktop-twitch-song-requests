@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"slices"
 
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/songrequests"
 	"github.com/joeyak/go-twitch-eventsub/v3"
@@ -62,13 +63,27 @@ func (a *App) songRequestSubmit(useProperHelix *helix.Client, properUserID strin
 	afterSelected := false
 	songExistsInQueue := false
 	for _, v := range queue.Items {
+		selected := false
+		compareVideoIDs := []string{}
 		if v.PlaylistPanelVideoWrapperRenderer != nil {
-			v.PlaylistPanelVideoRenderer = &v.PlaylistPanelVideoWrapperRenderer.PrimaryRenderer.PlaylistPanelVideoRenderer
+			compareVideoIDs = append(compareVideoIDs, v.PlaylistPanelVideoWrapperRenderer.PrimaryRenderer.PlaylistPanelVideoRenderer.VideoId)
+			if v.PlaylistPanelVideoWrapperRenderer.PrimaryRenderer.PlaylistPanelVideoRenderer.Selected {
+				selected = true
+			}
+			for _, v2 := range v.PlaylistPanelVideoWrapperRenderer.Counterpart {
+				compareVideoIDs = append(compareVideoIDs, v2.CounterpartRenderer.PlaylistPanelVideoRenderer.VideoId)
+			}
 		}
-		if v.PlaylistPanelVideoRenderer.Selected {
+		if v.PlaylistPanelVideoRenderer != nil {
+			compareVideoIDs = append(compareVideoIDs, v.PlaylistPanelVideoRenderer.VideoId)
+			if v.PlaylistPanelVideoRenderer.Selected {
+				selected = true
+			}
+		}
+		if selected {
 			afterSelected = true
 		}
-		if afterSelected && song.VideoID == v.PlaylistPanelVideoRenderer.VideoId {
+		if afterSelected && slices.Contains(compareVideoIDs, song.VideoID) {
 			songExistsInQueue = true
 			break
 		}
