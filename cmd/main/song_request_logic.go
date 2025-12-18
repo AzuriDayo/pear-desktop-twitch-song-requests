@@ -74,10 +74,9 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, event twitch.Event
 		log.Println(event.ChatterUserLogin + ": Queued song " + song.Title + " - " + song.Artist)
 	}
 
-	nowIndex := -1
 	addedSongIndex := -1
 	afterVideoIndex := -1
-	afterVideoId := playerInfo.Song.VideoId
+	afterVideoId := ""
 	if len(songQueue) > 0 {
 		afterVideoId = songQueue[len(songQueue)-1].song.VideoID
 	}
@@ -120,6 +119,10 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, event twitch.Event
 			return
 		}
 	}()
+	if afterVideoId == "" {
+		// do nothing, it is already in the right position
+		return
+	}
 
 	// Fetch new q details
 	// Get q info
@@ -177,23 +180,17 @@ OuterLoop:
 				})
 				return
 			}
-			nowIndex = -1
 			addedSongIndex = -1
 			afterVideoIndex = -1
-			for i, v := range queue.Items {
+			for i := len(queue.Items) - 1; i >= 0; i-- {
+				v := queue.Items[i]
 				if v.PlaylistPanelVideoWrapperRenderer != nil {
 					v.PlaylistPanelVideoRenderer = &v.PlaylistPanelVideoWrapperRenderer.PrimaryRenderer.PlaylistPanelVideoRenderer
 				}
-				if v.PlaylistPanelVideoRenderer.Selected {
-					nowIndex = i
-				}
-				if nowIndex == -1 {
-					continue
-				}
-				if nowIndex != -1 && afterVideoId == v.PlaylistPanelVideoRenderer.VideoId {
+				if afterVideoId == v.PlaylistPanelVideoRenderer.VideoId {
 					afterVideoIndex = i
 				}
-				if nowIndex != -1 && song.VideoID == v.PlaylistPanelVideoRenderer.VideoId {
+				if song.VideoID == v.PlaylistPanelVideoRenderer.VideoId {
 					addedSongIndex = i
 				}
 				if afterVideoIndex != -1 && addedSongIndex != -1 {
@@ -225,11 +222,6 @@ OuterLoop:
 		return
 	}
 
-	// Drag song into the right order
-	if afterVideoIndex+1 == addedSongIndex {
-		// do not move anything
-		return
-	}
 	b2, _ := json.Marshal(echo.Map{
 		"toIndex": afterVideoIndex,
 	})
