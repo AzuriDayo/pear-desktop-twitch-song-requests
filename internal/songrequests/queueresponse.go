@@ -27,6 +27,11 @@ type QueueResponse struct {
 			PrimaryRenderer struct {
 				PlaylistPanelVideoRenderer QueueResponsePlaylistPanelVideoRenderer `json:"playlistPanelVideoRenderer"`
 			} `json:"primaryRenderer"`
+			Counterpart []struct {
+				CounterpartRenderer struct {
+					PlaylistPanelVideoRenderer QueueResponsePlaylistPanelVideoRenderer `json:"playlistPanelVideoRenderer"`
+				} `json:"counterpartRenderer"`
+			} `json:"counterpart"`
 		} `json:"playlistPanelVideoWrapperRenderer"`
 	} `json:"items"`
 }
