@@ -7,9 +7,11 @@ require (
 	github.com/golang-migrate/migrate/v4 v4.19.1
 	github.com/joeyak/go-twitch-eventsub/v3 v3.0.1
 	github.com/labstack/echo/v4 v4.13.4
+	github.com/lxi1400/GoTitle v0.0.0-20210314075355-9d4645c96c0e
 	github.com/nicklaw5/helix/v2 v2.32.0
 	github.com/recws-org/recws v1.4.0
 	github.com/valyala/fastjson v1.6.4
+	golang.org/x/mod v0.31.0
 	golang.org/x/net v0.47.0
 	modernc.org/sqlite v1.40.1
 )

@@ -21,32 +21,33 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
+      - if: github.ref_type == 'tag'
+        id: version-tag-ref
+        run: |
+          ref="${{ github.ref }}"
+          echo "ref=${ref#refs/tags/}" >>"$GITHUB_OUTPUT"
+          go run -ldflags="-X main.version=${ref}" ./cmd/validate_semver
       - shell: bash
         run: |
           pnpm i --frozen-lockfile
           pnpm -r build
           rm -rf cmd/main/build
           cp -r control-panel/build cmd/main
-          ./build_dist.sh
+          GIT_SHORT_TAG="${{ steps.version-tag-ref.outputs.ref }}" ./build_dist.sh
         # execname=pear-desktop-twitch-song-requests_${{ matrix.os.name }}_${{ matrix.os.arch }}
-        # if [ "${{ matrix.os.name }}" = 'windows' ]; then execname="${execname}.exe"; fi
-        # CGO_ENABLED=0 GOOS=${{ matrix.os.name }} GOARCH=${{ matrix.os.arch }} go build -ldflags="-s -w" -trimpath -o "$execname" cmd/main/*.go
       - uses: actions/upload-artifact@v4
         if: github.ref_type != 'tag'
         with:
           name: pear-desktop-twitch-song-requests_${{ matrix.os.name }}_${{ matrix.os.arch }}
           path: pear-desktop-twitch-song-requests_*
-      - id: version-tag-ref
-        if: github.ref_type == 'tag'
+      - if: github.ref_type == 'tag'
         run: |
-          ref="${{ github.ref }}"
-          mv pear-desktop-twitch-song-requests_linux_amd64 pear-desktop-twitch-song-requests_linux_amd64-${ref#refs/tags/}
-          mv pear-desktop-twitch-song-requests_linux_arm64 pear-desktop-twitch-song-requests_linux_arm64-${ref#refs/tags/}
-          mv pear-desktop-twitch-song-requests_windows_amd64.exe pear-desktop-twitch-song-requests_windows_amd64-${ref#refs/tags/}.exe
-          mv pear-desktop-twitch-song-requests_windows_arm64.exe pear-desktop-twitch-song-requests_windows_arm64-${ref#refs/tags/}.exe
-          mv pear-desktop-twitch-song-requests_darwin_amd64 pear-desktop-twitch-song-requests_darwin_amd64-${ref#refs/tags/}
-          mv pear-desktop-twitch-song-requests_darwin_arm64 pear-desktop-twitch-song-requests_darwin_arm64-${ref#refs/tags/}
-          echo "ref=${ref#refs/tags/}" >>"$GITHUB_OUTPUT"
+          mv pear-desktop-twitch-song-requests_linux_amd64 pear-desktop-twitch-song-requests_linux_amd64-${{ steps.version-tag-ref.outputs.ref }}
+          mv pear-desktop-twitch-song-requests_linux_arm64 pear-desktop-twitch-song-requests_linux_arm64-${{ steps.version-tag-ref.outputs.ref }}
+          mv pear-desktop-twitch-song-requests_windows_amd64.exe pear-desktop-twitch-song-requests_windows_amd64-${{ steps.version-tag-ref.outputs.ref }}.exe
+          mv pear-desktop-twitch-song-requests_windows_arm64.exe pear-desktop-twitch-song-requests_windows_arm64-${{ steps.version-tag-ref.outputs.ref }}.exe
+          mv pear-desktop-twitch-song-requests_darwin_amd64 pear-desktop-twitch-song-requests_darwin_amd64-${{ steps.version-tag-ref.outputs.ref }}
+          mv pear-desktop-twitch-song-requests_darwin_arm64 pear-desktop-twitch-song-requests_darwin_arm64-${{ steps.version-tag-ref.outputs.ref }}
       - uses: softprops/action-gh-release@v2
         if: github.ref_type == 'tag'
         env:

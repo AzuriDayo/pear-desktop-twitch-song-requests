@@ -26,6 +26,8 @@ import (
 	"golang.org/x/net/websocket"
 )
 
+var version = "development"
+
 type twitchData struct {
 	accessToken     string
 	login           string
@@ -100,6 +102,8 @@ func (a *App) Run() error {
 	if err != nil {
 		return err
 	}
+
+	log.Println("Starting Pear Desktop Twitch Song Requests", version)
 
 	// Auto reconnect pear desktop and funnel mesasges to channel
 	log.Println("Pear Desktop WS service starting...")
@@ -227,6 +231,7 @@ func (a *App) Run() error {
 	case "windows":
 		cmd = "cmd"
 		args = []string{"/c", "start"}
+		setTitle("Pear Desktop Twitch Song Requests " + version + " by AzuriDayo_")
 	case "darwin":
 		cmd = "open"
 	default: // "linux", "freebsd", "openbsd", "netbsd"
