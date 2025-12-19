@@ -42,12 +42,12 @@ jobs:
           path: pear-desktop-twitch-song-requests_*
       - if: github.ref_type == 'tag'
         run: |
-          mv pear-desktop-twitch-song-requests_linux_amd64 pear-desktop-twitch-song-requests_linux_amd64-${{ steps.version-tag-ref.outputs.ref }}
-          mv pear-desktop-twitch-song-requests_linux_arm64 pear-desktop-twitch-song-requests_linux_arm64-${{ steps.version-tag-ref.outputs.ref }}
-          mv pear-desktop-twitch-song-requests_windows_amd64.exe pear-desktop-twitch-song-requests_windows_amd64-${{ steps.version-tag-ref.outputs.ref }}.exe
-          mv pear-desktop-twitch-song-requests_windows_arm64.exe pear-desktop-twitch-song-requests_windows_arm64-${{ steps.version-tag-ref.outputs.ref }}.exe
-          mv pear-desktop-twitch-song-requests_darwin_amd64 pear-desktop-twitch-song-requests_darwin_amd64-${{ steps.version-tag-ref.outputs.ref }}
-          mv pear-desktop-twitch-song-requests_darwin_arm64 pear-desktop-twitch-song-requests_darwin_arm64-${{ steps.version-tag-ref.outputs.ref }}
+          # mv pear-desktop-twitch-song-requests_linux_amd64 pear-desktop-twitch-song-requests_linux_amd64
+          # mv pear-desktop-twitch-song-requests_linux_arm64 pear-desktop-twitch-song-requests_linux_arm64
+          mv pear-desktop-twitch-song-requests_windows_amd64.exe pear-desktop-twitch-song-requests_windows_x64.exe
+          # mv pear-desktop-twitch-song-requests_windows_arm64.exe pear-desktop-twitch-song-requests_windows_on_arm.exe
+          mv pear-desktop-twitch-song-requests_darwin_amd64 pear-desktop-twitch-song-requests_macos_intel
+          mv pear-desktop-twitch-song-requests_darwin_arm64 pear-desktop-twitch-song-requests_macos_apple_silicon
       - uses: softprops/action-gh-release@v2
         if: github.ref_type == 'tag'
         env:
@@ -60,9 +60,9 @@ jobs:
           preserve_order: true
           fail_on_unmatched_files: true
           files: |
-            pear-desktop-twitch-song-requests_windows_amd64-${{ steps.version-tag-ref.outputs.ref }}.exe
-            pear-desktop-twitch-song-requests_windows_arm64-${{ steps.version-tag-ref.outputs.ref }}.exe
-            pear-desktop-twitch-song-requests_linux_amd64-${{ steps.version-tag-ref.outputs.ref }}
-            pear-desktop-twitch-song-requests_linux_arm64-${{ steps.version-tag-ref.outputs.ref }}
-            pear-desktop-twitch-song-requests_darwin_amd64-${{ steps.version-tag-ref.outputs.ref }}
-            pear-desktop-twitch-song-requests_darwin_arm64-${{ steps.version-tag-ref.outputs.ref }}
+            pear-desktop-twitch-song-requests_windows_x64.exe
+            pear-desktop-twitch-song-requests_windows_on_arm.exe
+            pear-desktop-twitch-song-requests_linux_amd64
+            pear-desktop-twitch-song-requests_linux_arm64
+            pear-desktop-twitch-song-requests_macos_intel
+            pear-desktop-twitch-song-requests_macos_apple_silicon
