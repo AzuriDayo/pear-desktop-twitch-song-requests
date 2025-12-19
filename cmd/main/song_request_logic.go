@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -185,20 +184,20 @@ OuterLoop:
 			afterVideoIndex = -1
 			for i := len(queue.Items) - 1; i >= 0; i-- {
 				v := queue.Items[i]
-				compareVideoIDs := []string{}
+				compareVideoIDs := map[string]struct{}{}
 				if v.PlaylistPanelVideoWrapperRenderer != nil {
-					compareVideoIDs = append(compareVideoIDs, v.PlaylistPanelVideoWrapperRenderer.PrimaryRenderer.PlaylistPanelVideoRenderer.VideoId)
+					compareVideoIDs[v.PlaylistPanelVideoWrapperRenderer.PrimaryRenderer.PlaylistPanelVideoRenderer.VideoId] = struct{}{}
 					for _, v2 := range v.PlaylistPanelVideoWrapperRenderer.Counterpart {
-						compareVideoIDs = append(compareVideoIDs, v2.CounterpartRenderer.PlaylistPanelVideoRenderer.VideoId)
+						compareVideoIDs[v2.CounterpartRenderer.PlaylistPanelVideoRenderer.VideoId] = struct{}{}
 					}
 				}
 				if v.PlaylistPanelVideoRenderer != nil {
-					compareVideoIDs = append(compareVideoIDs, v.PlaylistPanelVideoRenderer.VideoId)
+					compareVideoIDs[v.PlaylistPanelVideoRenderer.VideoId] = struct{}{}
 				}
-				if slices.Contains(compareVideoIDs, afterVideoId) {
+				if _, ok := compareVideoIDs[afterVideoId]; ok {
 					afterVideoIndex = i
 				}
-				if slices.Contains(compareVideoIDs, song.VideoID) {
+				if _, ok := compareVideoIDs[song.VideoID]; ok {
 					addedSongIndex = i
 				}
 				if afterVideoIndex != -1 && addedSongIndex != -1 {
