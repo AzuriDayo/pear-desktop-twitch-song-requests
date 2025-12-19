@@ -37,6 +37,7 @@ type twitchData struct {
 }
 
 func main() {
+	setTitle("Pear Desktop Twitch Song Requests " + version + " by AzuriDayo_")
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	helpers.PreflightTest()
@@ -231,7 +232,6 @@ func (a *App) Run() error {
 	case "windows":
 		cmd = "cmd"
 		args = []string{"/c", "start"}
-		setTitle("Pear Desktop Twitch Song Requests " + version + " by AzuriDayo_")
 	case "darwin":
 		cmd = "open"
 	default: // "linux", "freebsd", "openbsd", "netbsd"
