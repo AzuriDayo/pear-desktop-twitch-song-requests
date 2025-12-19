@@ -26,7 +26,7 @@ jobs:
         run: |
           ref="${{ github.ref }}"
           echo "ref=${ref#refs/tags/}" >>"$GITHUB_OUTPUT"
-          go run -ldflags="-X main.version=${ref}" ./cmd/validate_semver
+          go run -ldflags="-X main.version=${ref#refs/tags/}" ./cmd/validate_semver
       - shell: bash
         run: |
           pnpm i --frozen-lockfile
