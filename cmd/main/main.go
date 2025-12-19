@@ -37,7 +37,8 @@ type twitchData struct {
 }
 
 func main() {
-	setTitle("Pear Desktop Twitch Song Requests " + version + " by AzuriDayo_")
+	setTitle("Pear Desktop Twitch Song Requests by AzuriDayo_")
+	log.Println("Starting Pear Desktop Twitch Song Requests", version)
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	helpers.PreflightTest()
@@ -103,8 +104,6 @@ func (a *App) Run() error {
 	if err != nil {
 		return err
 	}
-
-	log.Println("Starting Pear Desktop Twitch Song Requests", version)
 
 	// Auto reconnect pear desktop and funnel mesasges to channel
 	log.Println("Pear Desktop WS service starting...")
