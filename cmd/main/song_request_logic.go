@@ -111,6 +111,8 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, event twitch.Event
 			VideoID:        song.VideoID,
 			TwitchUsername: event.ChatterUserLogin,
 			RequestedAt:    time.Now().Local().Format(data.TWITCH_SERVER_DATE_LAYOUT),
+			UserID:         event.ChatterUserId,
+			IsNinja:        event.BroadcasterUserLogin == a.twitchDataStructBot.login,
 		}
 		stmt = SongRequestRequesters.INSERT(SongRequestRequesters.AllColumns).MODEL(srrData)
 		_, err = stmt.Exec(db)
