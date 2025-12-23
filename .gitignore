@@ -96,7 +96,7 @@ cmd/tester*
 control-panel/build
 venv
 /main.exe
-pear-desktop-twitch-song-requests.db
+pear-desktop-twitch-song-requests*.db
 /main
 /pear-desktop-twitch-song-requests_linux_*
 /pear-desktop-twitch-song-requests_darwin_*

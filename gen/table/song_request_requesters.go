@@ -20,6 +20,8 @@ type songRequestRequestersTable struct {
 	VideoID        sqlite.ColumnString
 	TwitchUsername sqlite.ColumnString
 	RequestedAt    sqlite.ColumnString
+	UserID         sqlite.ColumnString
+	IsNinja        sqlite.ColumnBool
 
 	AllColumns     sqlite.ColumnList
 	MutableColumns sqlite.ColumnList
@@ -64,9 +66,11 @@ func newSongRequestRequestersTableImpl(schemaName, tableName, alias string) song
 		VideoIDColumn        = sqlite.StringColumn("video_id")
 		TwitchUsernameColumn = sqlite.StringColumn("twitch_username")
 		RequestedAtColumn    = sqlite.StringColumn("requested_at")
-		allColumns           = sqlite.ColumnList{VideoIDColumn, TwitchUsernameColumn, RequestedAtColumn}
-		mutableColumns       = sqlite.ColumnList{VideoIDColumn, TwitchUsernameColumn, RequestedAtColumn}
-		defaultColumns       = sqlite.ColumnList{RequestedAtColumn}
+		UserIDColumn         = sqlite.StringColumn("user_id")
+		IsNinjaColumn        = sqlite.BoolColumn("is_ninja")
+		allColumns           = sqlite.ColumnList{VideoIDColumn, TwitchUsernameColumn, RequestedAtColumn, UserIDColumn, IsNinjaColumn}
+		mutableColumns       = sqlite.ColumnList{VideoIDColumn, TwitchUsernameColumn, RequestedAtColumn, UserIDColumn, IsNinjaColumn}
+		defaultColumns       = sqlite.ColumnList{RequestedAtColumn, UserIDColumn, IsNinjaColumn}
 	)
 
 	return songRequestRequestersTable{
@@ -76,6 +80,8 @@ func newSongRequestRequestersTableImpl(schemaName, tableName, alias string) song
 		VideoID:        VideoIDColumn,
 		TwitchUsername: TwitchUsernameColumn,
 		RequestedAt:    RequestedAtColumn,
+		UserID:         UserIDColumn,
+		IsNinja:        IsNinjaColumn,
 
 		AllColumns:     allColumns,
 		MutableColumns: mutableColumns,
