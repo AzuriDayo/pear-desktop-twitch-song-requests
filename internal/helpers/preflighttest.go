@@ -64,20 +64,19 @@ func PreflightTest() {
 				log.Println(err)
 				log.Println("It is not yet necessary, will re-attempt on next app launch")
 			}
-			// TODO: uncomment all blocks below after testing
-			// err = data.SetDataTransformed(db, v)
-			// if err != nil {
-			// 	if v.IsNecessary() {
-			// 		log.Println("Failed to save database transform results", v.GetKey())
-			// 		log.Println(err)
-			// 		log.Println("Press Enter to exit...")
-			// 		bufio.NewReader(os.Stdin).ReadBytes('\n')
-			// 		os.Exit(1)
-			// 	}
-			// 	log.Println("Failed to save database transform results", v.GetKey())
-			//  log.Println(err)
-			// 	log.Println("It is not yet necessary, will re-attempt on next app launch")
-			// }
+			err = data.SetDataTransformed(db, v)
+			if err != nil {
+				if v.IsNecessary() {
+					log.Println("Failed to save database transform results", v.GetKey())
+					log.Println(err)
+					log.Println("Press Enter to exit...")
+					bufio.NewReader(os.Stdin).ReadBytes('\n')
+					os.Exit(1)
+				}
+				log.Println("Failed to save database transform results", v.GetKey())
+				log.Println(err)
+				log.Println("It is not yet necessary, will re-attempt on next app launch")
+			}
 		}
 	}
 	log.Println("Done Database Transforms")

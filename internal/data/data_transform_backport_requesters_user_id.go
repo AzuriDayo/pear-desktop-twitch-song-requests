@@ -6,6 +6,7 @@ import (
 	"log"
 
 	. "github.com/azuridayo/pear-desktop-twitch-song-requests/gen/table"
+	"github.com/go-jet/jet/v2/sqlite"
 	. "github.com/go-jet/jet/v2/sqlite"
 	"github.com/nicklaw5/helix/v2"
 )
@@ -21,26 +22,28 @@ func (d dataTransformTypeBackportRequestersUserID) GetKey() string {
 
 func (d dataTransformTypeBackportRequestersUserID) Transform(db *sql.DB) error {
 	// fetch all srr with empty user_id
-	rowsNeedFix := []struct {
+	rowsToFix := []struct {
+		RowID          int64
 		TwitchUsername string
+		UserID         string
 	}{}
-	stmt := SELECT(SongRequestRequesters.TwitchUsername.AS("twitch_username")).FROM(SongRequestRequesters).WHERE(SongRequestRequesters.UserID.EQ(String("")))
-	err := stmt.Query(db, &rowsNeedFix)
+	stmt := SELECT(sqlite.IntegerColumn("rowid").AS("row_id"), SongRequestRequesters.TwitchUsername.AS("twitch_username")).FROM(SongRequestRequesters).WHERE(SongRequestRequesters.UserID.EQ(String("")))
+	err := stmt.Query(db, &rowsToFix)
 	if err != nil {
 		return err
 	}
 
 	// return early when nothing needs fixing
-	if len(rowsNeedFix) < 1 {
+	if len(rowsToFix) < 1 {
 		return nil
 	}
 
 	// paginate get users from chatter login
 	logins := []string{}
 	mData := map[string]string{}
-	for _, v := range rowsNeedFix {
+	for _, v := range rowsToFix {
 		if _, ok := mData[v.TwitchUsername]; !ok {
-			mData[v.TwitchUsername] = v.TwitchUsername
+			mData[v.TwitchUsername] = ""
 			logins = append(logins, v.TwitchUsername)
 		}
 	}
@@ -91,23 +94,35 @@ func (d dataTransformTypeBackportRequestersUserID) Transform(db *sql.DB) error {
 		}
 		for _, v := range resp.Data.Users {
 			if v2, ok := mData[v.Login]; ok && v2 == "" {
-				v2 = v.ID
+				mData[v.Login] = v.ID
 			}
 		}
 	}
 
-	caseExpr := CASE(SongRequestRequesters.TwitchUsername)
-	for k, v := range mData {
-		caseExpr = caseExpr.WHEN(SongRequestRequesters.TwitchUsername.EQ(String(k))).THEN(String(v))
-	}
-	caseExpr = caseExpr.ELSE(String(""))
-
 	// save to db
-	updateStmt := SongRequestRequesters.UPDATE(SongRequestRequesters.UserID).SET(caseExpr).WHERE(SongRequestRequesters.UserID.EQ(String("")))
-	log.Println(updateStmt.DebugSql())
-	// _, err = updateStmt.Exec(db)
-	err = errors.New("Not yet implemented")
+	tx, err := db.Begin()
 	if err != nil {
+		return err
+	}
+
+	for _, v := range rowsToFix {
+		if v2, ok := mData[v.TwitchUsername]; ok {
+			v.UserID = v2
+		} else {
+			v.UserID = "-1"
+		}
+
+		stmt := SongRequestRequesters.UPDATE(SongRequestRequesters.UserID).SET(String(v.UserID)).WHERE(sqlite.IntegerColumn("rowid").EQ(Int64(v.RowID)))
+		_, err = stmt.Exec(db)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		tx.Rollback()
 		return err
 	}
 
