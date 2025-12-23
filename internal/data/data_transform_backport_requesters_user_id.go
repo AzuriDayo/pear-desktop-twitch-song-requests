@@ -6,11 +6,11 @@ import (
 	"log"
 
 	. "github.com/azuridayo/pear-desktop-twitch-song-requests/gen/table"
-	"github.com/go-jet/jet/v2/sqlite"
 	. "github.com/go-jet/jet/v2/sqlite"
 	"github.com/nicklaw5/helix/v2"
 )
 
+// since v1.0.0 used to correct versions v0.x and below
 type dataTransformTypeBackportRequestersUserID struct{}
 
 var dataTransformBackportRequestersUserID = dataTransformTypeBackportRequestersUserID{}
@@ -20,40 +20,19 @@ func (d dataTransformTypeBackportRequestersUserID) GetKey() string {
 }
 
 func (d dataTransformTypeBackportRequestersUserID) Transform(db *sql.DB) error {
-	userAccessToken := struct {
-		Value string
-	}{}
-	stmt := SELECT(Settings.Value).FROM(Settings).WHERE(Settings.Key.EQ(String(DB_KEY_TWITCH_ACCESS_TOKEN))).LIMIT(1)
-	err := stmt.Query(db, &userAccessToken)
-	if err != nil {
-		return err
-	}
-
-	helixClient, err := helix.NewClient(&helix.Options{
-		ClientID: GetTwitchClientID(),
-	})
-	if err != nil {
-		return err
-	}
-
-	valid, _, err := helixClient.ValidateToken(userAccessToken.Value)
-	if err != nil {
-		return err
-	}
-	if !valid {
-		return errors.New("BACKPORT_REQUESTERS_USER_ID: invalid user access token")
-	}
-	helixClient.SetUserAccessToken(userAccessToken.Value)
-
 	// fetch all srr with empty user_id
 	rowsNeedFix := []struct {
-		RowID          int64
 		TwitchUsername string
 	}{}
-	stmt = SELECT(sqlite.RawString("rowid").AS("row_id"), SongRequestRequesters.TwitchUsername.AS("twitch_username")).FROM(SongRequestRequesters).WHERE(SongRequestRequesters.UserID.EQ(String("")))
-	err = stmt.Query(db, &rowsNeedFix)
+	stmt := SELECT(SongRequestRequesters.TwitchUsername.AS("twitch_username")).FROM(SongRequestRequesters).WHERE(SongRequestRequesters.UserID.EQ(String("")))
+	err := stmt.Query(db, &rowsNeedFix)
 	if err != nil {
 		return err
+	}
+
+	// return early when nothing needs fixing
+	if len(rowsNeedFix) < 1 {
+		return nil
 	}
 
 	// paginate get users from chatter login
@@ -71,9 +50,35 @@ func (d dataTransformTypeBackportRequestersUserID) Transform(db *sql.DB) error {
 		batches++
 	}
 
-	if batches == 0 {
-		return nil
+	userAccessToken := struct {
+		Value string
+	}{}
+	stmt = SELECT(Settings.Value.AS("value")).FROM(Settings).WHERE(Settings.Key.EQ(String(DB_KEY_TWITCH_ACCESS_TOKEN))).LIMIT(1)
+	err = stmt.Query(db, &userAccessToken)
+	if err != nil {
+		return err
 	}
+	if userAccessToken.Value == "" {
+		return errors.New("BACKPORT_REQUESTERS_USER_ID: user access token is empty")
+	}
+
+	helixClient, err := helix.NewClient(&helix.Options{
+		ClientID: GetTwitchClientID(),
+	})
+	if err != nil {
+		return err
+	}
+
+	valid, response, err := helixClient.ValidateToken(userAccessToken.Value)
+	if err != nil {
+		return err
+	}
+	if !valid {
+		log.Println("BACKPORT_REQUESTERS_USER_ID: invalid token reponse", response.ResponseCommon)
+		return errors.New("BACKPORT_REQUESTERS_USER_ID: invalid user access token")
+	}
+	helixClient.SetUserAccessToken(userAccessToken.Value)
+
 	for i := range batches {
 		batchStart := i * 100
 		batchEnd := min(batchStart+100, len(logins))
