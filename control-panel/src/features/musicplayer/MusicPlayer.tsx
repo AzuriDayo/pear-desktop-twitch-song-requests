@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useAppSelector, useAppDispatch } from "../../app/hooks";
-import { setSongInfo } from "./musicPlayerSlice";
 import { handleWsMessages } from "./handleWsMessages";
 
 export function MusicPlayer() {
@@ -24,7 +23,7 @@ export function MusicPlayer() {
 
 			ws.onmessage = (event) => {
 				if (event.type == "message") {
-					handleWsMessages(event.data as string, dispatch, { setSongInfo });
+					handleWsMessages(event.data as string, dispatch);
 				} else {
 					console.log("PEAR_DESKTOP_WS bin_data", event);
 				}
