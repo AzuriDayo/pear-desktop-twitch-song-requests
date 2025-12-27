@@ -21,33 +21,64 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-      - if: github.ref_type == 'tag'
-        id: version-tag-ref
+      - id: version-tag-ref
         run: |
-          ref="${{ github.ref }}"
-          echo "ref=${ref#refs/tags/}" >>"$GITHUB_OUTPUT"
-          go run -ldflags="-X main.version=${ref#refs/tags/}" ./cmd/validate_semver
+          if [[ '${{ github.ref_type }}' = 'tag' ]]; then
+            ref='${{ github.ref }}'
+            echo "ref=${ref#refs/tags/}" >>"$GITHUB_OUTPUT"
+            go run -ldflags="-X main.version=${ref#refs/tags/}" ./cmd/validate_semver
+          else
+            echo "ref=v0.0.0+${{ github.sha }}" >>"$GITHUB_OUTPUT"
+          fi
       - shell: bash
         run: |
           pnpm i --frozen-lockfile
           pnpm -r build
           rm -rf cmd/main/build
-          cp -r control-panel/build cmd/main
-          GIT_SHORT_TAG="${{ steps.version-tag-ref.outputs.ref }}" ./build_dist.sh
-        # execname=pear-desktop-twitch-song-requests_${{ matrix.os.name }}_${{ matrix.os.arch }}
-      - uses: actions/upload-artifact@v4
-        if: github.ref_type != 'tag'
+          mv control-panel/build cmd/main
+          GIT_SHORT_TAG='${{ steps.version-tag-ref.outputs.ref }}' ./build_dist.sh
+      - if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
         with:
-          name: pear-desktop-twitch-song-requests_${{ matrix.os.name }}_${{ matrix.os.arch }}
-          path: pear-desktop-twitch-song-requests_*
-      - if: github.ref_type == 'tag'
-        run: |
-          # mv pear-desktop-twitch-song-requests_linux_amd64 pear-desktop-twitch-song-requests_linux_amd64
-          # mv pear-desktop-twitch-song-requests_linux_arm64 pear-desktop-twitch-song-requests_linux_arm64
-          mv pear-desktop-twitch-song-requests_windows_amd64.exe pear-desktop-twitch-song-requests_windows_x64.exe
-          mv pear-desktop-twitch-song-requests_windows_arm64.exe pear-desktop-twitch-song-requests_windows_on_arm.exe
-          mv pear-desktop-twitch-song-requests_darwin_amd64 pear-desktop-twitch-song-requests_macos_intel
-          mv pear-desktop-twitch-song-requests_darwin_arm64 pear-desktop-twitch-song-requests_macos_apple_silicon
+          name: pear-desktop-twitch-song-requests_windows_x64
+          path: pear-desktop-twitch-song-requests_windows_x64.exe
+          compression-level: 0
+          if-no-files-found: error
+      - if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pear-desktop-twitch-song-requests_windows_on_arm
+          path: pear-desktop-twitch-song-requests_windows_on_arm.exe
+          compression-level: 0
+          if-no-files-found: error
+      - if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pear-desktop-twitch-song-requests_macos_intel
+          path: pear-desktop-twitch-song-requests_macos_intel
+          compression-level: 0
+          if-no-files-found: error
+      - if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pear-desktop-twitch-song-requests_macos_apple_silicon
+          path: pear-desktop-twitch-song-requests_macos_apple_silicon
+          compression-level: 0
+          if-no-files-found: error
+      - if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pear-desktop-twitch-song-requests_linux_amd64
+          path: pear-desktop-twitch-song-requests_linux_amd64
+          compression-level: 0
+          if-no-files-found: error
+      - if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pear-desktop-twitch-song-requests_linux_arm64
+          path: pear-desktop-twitch-song-requests_linux_arm64
+          compression-level: 0
+          if-no-files-found: error
       - uses: softprops/action-gh-release@v2
         if: github.ref_type == 'tag'
         env:
