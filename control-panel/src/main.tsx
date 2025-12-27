@@ -12,6 +12,13 @@ import { TwitchWS } from "./features/twitchws/TwitchWS.tsx";
 import { Home } from "./Home.tsx";
 import { Settings } from "./components/Settings.tsx";
 import Queue from "./features/queue/index.tsx";
+import { ThemeProvider, createTheme } from "@mui/material/styles";
+
+const darkTheme = createTheme({
+	palette: {
+		mode: "dark",
+	},
+});
 
 const root = ReactDOM.createRoot(
 	document.getElementById("root") as HTMLElement,
@@ -22,25 +29,27 @@ root.render(
 		<Provider store={store}>
 			<MusicPlayer />
 			<TwitchWS />
-			<BrowserRouter>
-				<Routes>
-					<Route path="/" element={<Home />} />
-					<Route path="/settings" element={<Settings />} />
-					<Route path="/queue" element={<Queue />} />
-					<Route path="/oauth">
-						<Route
-							path="twitch-connect"
-							element={<ConnectWithTwitchEntry forBot={false} />}
-						/>
-						<Route
-							path="twitch-connect-bot"
-							element={<ConnectWithTwitchEntry forBot={true} />}
-						/>
-						<Route path="twitch-success" element={<TwitchSuccess />} />
-						<Route path="twitch" element={<ProcessTwitchOAuth />} />
-					</Route>
-				</Routes>
-			</BrowserRouter>
+			<ThemeProvider theme={darkTheme}>
+				<BrowserRouter>
+					<Routes>
+						<Route path="/" element={<Home />} />
+						<Route path="/settings" element={<Settings />} />
+						<Route path="/queue" element={<Queue />} />
+						<Route path="/oauth">
+							<Route
+								path="twitch-connect"
+								element={<ConnectWithTwitchEntry forBot={false} />}
+							/>
+							<Route
+								path="twitch-connect-bot"
+								element={<ConnectWithTwitchEntry forBot={true} />}
+							/>
+							<Route path="twitch-success" element={<TwitchSuccess />} />
+							<Route path="twitch" element={<ProcessTwitchOAuth />} />
+						</Route>
+					</Routes>
+				</BrowserRouter>
+			</ThemeProvider>
 		</Provider>
 	</React.StrictMode>,
 );
