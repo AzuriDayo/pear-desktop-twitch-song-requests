@@ -8,51 +8,64 @@ import ListItemText from "@mui/material/ListItemText";
 import Typography from "@mui/material/Typography";
 
 export default () => {
-	const { queue } = useAppSelector((state) => state.songQueueState);
+	const { song_queue, isLoaded } = useAppSelector(
+		(state) => state.songQueueState,
+	);
 
 	return (
 		<div>
-			{queue.length > 1 ? (
-				<List
-					sx={{ width: "100%", maxWidth: 360, bgcolor: "background.paper" }}
-				>
-					{queue.map(
-						(
-							{ requested_by, song: { artist, imageUrl, title, videoId } },
-							i,
-						) => {
-							return (
-								<>
-									<ListItem alignItems="flex-start">
-										<ListItemAvatar>
-											<Avatar alt={`${title} - ${artist}`} src={imageUrl} />
-										</ListItemAvatar>
-										<ListItemText
-											primary={requested_by}
-											secondary={
-												<a href={`https://youtu.be/${videoId}`} target="_blank">
-													<Typography
-														component="span"
-														variant="body2"
-														sx={{ color: "text.primary", display: "inline" }}
+			{isLoaded ? (
+				song_queue.length > 0 ? (
+					<List
+						sx={{ width: "100%", maxWidth: 360, bgcolor: "background.paper" }}
+					>
+						{song_queue.map(
+							(
+								{
+									requested_by,
+									song: { artist, imageUrl, title, videoId },
+									is_ninja,
+								},
+								i,
+							) => {
+								return (
+									<>
+										<ListItem alignItems="flex-start">
+											<ListItemAvatar>
+												<Avatar alt={`${title} - ${artist}`} src={imageUrl} />
+											</ListItemAvatar>
+											<ListItemText
+												primary={requested_by + (is_ninja ? " 🥷" : "")}
+												secondary={
+													<a
+														href={`https://youtu.be/${videoId}`}
+														target="_blank"
 													>
-														{title}
-													</Typography>
-													{` — ${artist}`}
-												</a>
-											}
-										/>
-									</ListItem>
-									{i !== queue.length - 1 && (
-										<Divider variant="inset" component="li" />
-									)}
-								</>
-							);
-						},
-					)}
-				</List>
+														<Typography
+															component="span"
+															variant="body2"
+															sx={{ color: "text.primary", display: "inline" }}
+														>
+															{title}
+														</Typography>
+														{` — ${artist}`}
+													</a>
+												}
+											/>
+										</ListItem>
+										{i !== song_queue.length - 1 && (
+											<Divider variant="inset" component="li" />
+										)}
+									</>
+								);
+							},
+						)}
+					</List>
+				) : (
+					<div>Empty queue</div>
+				)
 			) : (
-				<div>Empty queue</div>
+				<div>Loading...</div>
 			)}
 		</div>
 	);

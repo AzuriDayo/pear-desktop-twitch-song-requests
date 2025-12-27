@@ -1,6 +1,11 @@
 import { Dispatch, UnknownAction } from "@reduxjs/toolkit";
 import { setTwitchInfo } from "./twitchSlice";
-import { setQueueInfo, SongQueueItem } from "./songQueueSlice";
+import {
+	addSong,
+	setQueueInfo,
+	shiftQueue,
+	SongQueueItem,
+} from "./songQueueSlice";
 
 export const handleWsMessages = (
 	data: string,
@@ -8,7 +13,8 @@ export const handleWsMessages = (
 ) => {
 	// Change this later its ugly af
 
-	const d: MsgTwitchInfo | MsgQueueInfo = JSON.parse(data);
+	const d: MsgTwitchInfo | MsgQueueInfo | MsgQueueAdd | MsgQueueShift =
+		JSON.parse(data);
 	console.log(d);
 
 	switch (d.type) {
@@ -24,7 +30,13 @@ export const handleWsMessages = (
 			);
 			break;
 		case "QUEUE_INFO":
-			dispatch(setQueueInfo(d));
+			dispatch(setQueueInfo({ song_queue: d.song_queue }));
+			break;
+		case "QUEUE_SHIFT":
+			dispatch(shiftQueue());
+			break;
+		case "QUEUE_ADD":
+			dispatch(addSong({ song: d.song }));
 			break;
 	}
 };
@@ -41,5 +53,13 @@ interface MsgTwitchInfo {
 
 interface MsgQueueInfo {
 	type: "QUEUE_INFO";
-	queue: SongQueueItem[];
+	song_queue: SongQueueItem[];
+}
+
+interface MsgQueueShift {
+	type: "QUEUE_SHIFT";
+}
+interface MsgQueueAdd {
+	type: "QUEUE_ADD";
+	song: SongQueueItem;
 }

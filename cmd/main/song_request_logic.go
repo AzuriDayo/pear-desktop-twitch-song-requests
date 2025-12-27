@@ -22,6 +22,7 @@ import (
 	"github.com/joeyak/go-twitch-eventsub/v3"
 	"github.com/labstack/echo/v4"
 	"github.com/nicklaw5/helix/v2"
+	"golang.org/x/net/websocket"
 )
 
 var srChan = make(chan struct {
@@ -80,10 +81,21 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, event twitch.Event
 	if len(songQueue) > 0 {
 		afterVideoId = songQueue[len(songQueue)-1].Song.VideoID
 	}
-	songQueue = append(songQueue, SongQueueItem{
+	songQueueItem := SongQueueItem{
 		RequestedBy: event.ChatterUserLogin,
 		Song:        *song,
+		IsNinja:     strings.EqualFold(event.BroadcasterUserLogin, a.twitchDataStructBot.login),
+	}
+	songQueue = append(songQueue, songQueueItem)
+	queueInfoOnAdd, _ := json.Marshal(echo.Map{
+		"type": "QUEUE_ADD",
+		"song": songQueueItem,
 	})
+	a.clientsMu.Lock()
+	for ws := range a.clients {
+		websocket.Message.Send(ws, string(queueInfoOnAdd))
+	}
+	a.clientsMu.Unlock()
 
 	// save to history
 	go func() {
@@ -109,7 +121,7 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, event twitch.Event
 			TwitchUsername: event.ChatterUserLogin,
 			RequestedAt:    time.Now().Local().Format(data.TWITCH_SERVER_DATE_LAYOUT),
 			UserID:         event.ChatterUserId,
-			IsNinja:        event.BroadcasterUserLogin == a.twitchDataStructBot.login,
+			IsNinja:        strings.EqualFold(event.BroadcasterUserLogin, a.twitchDataStructBot.login),
 		}
 		stmt = SongRequestRequesters.INSERT(SongRequestRequesters.AllColumns).MODEL(srrData)
 		_, err = stmt.Exec(db)

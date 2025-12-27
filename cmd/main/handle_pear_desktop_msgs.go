@@ -7,7 +7,9 @@ import (
 	"net/http"
 
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/songrequests"
+	"github.com/labstack/echo/v4"
 	"github.com/valyala/fastjson"
+	"golang.org/x/net/websocket"
 )
 
 func (a *App) handlePearDesktopMsgs() {
@@ -133,6 +135,7 @@ func (a *App) handlePearDesktopMsgs() {
 								if queue.Items[i].PlaylistPanelVideoRenderer.VideoId != newVideoId {
 									songQueue = append(songQueue, SongQueueItem{
 										RequestedBy: "recovered",
+										IsNinja:     false,
 										Song: songrequests.SongResult{
 											Title:   queue.Items[i].PlaylistPanelVideoRenderer.Title.Runs[0].Text,
 											Artist:  queue.Items[i].PlaylistPanelVideoRenderer.ShortBylineText.Runs[0].Text,
@@ -143,12 +146,31 @@ func (a *App) handlePearDesktopMsgs() {
 							}
 							// recover success
 							log.Println("Recovery successful, internal queue maintained")
+
+							queueInfoOnRecovery, _ := json.Marshal(echo.Map{
+								"type":       "QUEUE_INFO",
+								"song_queue": songQueue,
+							})
+							a.clientsMu.Lock()
+							for ws := range a.clients {
+								websocket.Message.Send(ws, string(queueInfoOnRecovery))
+							}
+							a.clientsMu.Unlock()
+
 						} else {
 							log.Println("Recovery unsuccessful, internal queue is wiped, but your queue in ytm is intact")
 						}
 					} else {
 						if len(songQueue) > 0 {
 							songQueue = songQueue[1:]
+							queueInfoOnShift, _ := json.Marshal(echo.Map{
+								"type": "QUEUE_SHIFT",
+							})
+							a.clientsMu.Lock()
+							for ws := range a.clients {
+								websocket.Message.Send(ws, string(queueInfoOnShift))
+							}
+							a.clientsMu.Unlock()
 						}
 					}
 				}
