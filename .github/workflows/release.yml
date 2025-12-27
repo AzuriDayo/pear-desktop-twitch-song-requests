@@ -37,11 +37,6 @@ jobs:
           rm -rf cmd/main/build
           mv control-panel/build cmd/main
           GIT_SHORT_TAG='${{ steps.version-tag-ref.outputs.ref }}' ./build_dist.sh
-      - run: |
-          mv pear-desktop-twitch-song-requests_windows_amd64.exe pear-desktop-twitch-song-requests_windows_x64.exe
-          mv pear-desktop-twitch-song-requests_windows_arm64.exe pear-desktop-twitch-song-requests_windows_on_arm.exe
-          mv pear-desktop-twitch-song-requests_darwin_amd64 pear-desktop-twitch-song-requests_macos_intel
-          mv pear-desktop-twitch-song-requests_darwin_arm64 pear-desktop-twitch-song-requests_macos_apple_silicon
       - if: github.ref_type != 'tag'
         uses: actions/upload-artifact@v4
         with:
