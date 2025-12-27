@@ -1,0 +1,61 @@
+name: Release
+
+on:
+  pull_request:
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - shell: bash
+        run: |
+          pnpm i --frozen-lockfile
+          pnpm -r build
+          rm -rf cmd/main/build
+          mv control-panel/build cmd/main
+          GIT_SHORT_TAG="v0.0.0+${{ github.sha }}" ./build_dist.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pear-desktop-twitch-song-requests_windows_x64
+          path: pear-desktop-twitch-song-requests_windows_x64.exe
+          compression-level: 0
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pear-desktop-twitch-song-requests_windows_on_arm
+          path: pear-desktop-twitch-song-requests_windows_on_arm.exe
+          compression-level: 0
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pear-desktop-twitch-song-requests_macos_intel
+          path: pear-desktop-twitch-song-requests_macos_intel
+          compression-level: 0
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pear-desktop-twitch-song-requests_macos_apple_silicon
+          path: pear-desktop-twitch-song-requests_macos_apple_silicon
+          compression-level: 0
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pear-desktop-twitch-song-requests_linux_amd64
+          path: pear-desktop-twitch-song-requests_linux_amd64
+          compression-level: 0
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pear-desktop-twitch-song-requests_linux_arm64
+          path: pear-desktop-twitch-song-requests_linux_arm64
+          compression-level: 0
+          if-no-files-found: error
