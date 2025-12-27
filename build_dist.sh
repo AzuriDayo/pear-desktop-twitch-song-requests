@@ -1,5 +1,10 @@
 #!/bin/bash
 set -ex
+
+if [ "$GIT_SHORT_TAG" = '' ]; then
+    false
+fi
+
 appname=pear-desktop-twitch-song-requests
 archfname=(amd64 arm64)
 osfname=(linux windows darwin)
