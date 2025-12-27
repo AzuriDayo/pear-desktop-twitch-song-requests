@@ -99,7 +99,7 @@ venv
 pear-desktop-twitch-song-requests*.db
 /main
 /pear-desktop-twitch-song-requests_linux_*
-/pear-desktop-twitch-song-requests_darwin_*
+/pear-desktop-twitch-song-requests_macos_*
 /pear-desktop-twitch-song-requests_windows_*
 local-*.sh
 __debug_bin*
