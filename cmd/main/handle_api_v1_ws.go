@@ -48,6 +48,17 @@ func (a *App) handleAppWs(c echo.Context) error {
 			// conn already closed
 			return
 		}
+		songQueueMutex.RLock()
+		queueInfoOnConnect, _ := json.Marshal(echo.Map{
+			"type":       "QUEUE_INFO",
+			"song_queue": songQueue,
+		})
+		songQueueMutex.RUnlock()
+		err = websocket.Message.Send(ws, string(queueInfoOnConnect))
+		if err != nil {
+			// conn already closed
+			return
+		}
 
 		// Keep connection alive and handle any incoming messages
 		for {

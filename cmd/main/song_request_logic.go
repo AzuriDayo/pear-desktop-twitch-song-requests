@@ -45,7 +45,7 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, event twitch.Event
 	}
 
 	for _, v := range songQueue {
-		if song.VideoID == v.song.VideoID {
+		if song.VideoID == v.Song.VideoID {
 			// Song was added too fast, between internal api calls
 			return
 		}
@@ -78,14 +78,11 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, event twitch.Event
 	afterVideoIndex := -1
 	afterVideoId := ""
 	if len(songQueue) > 0 {
-		afterVideoId = songQueue[len(songQueue)-1].song.VideoID
+		afterVideoId = songQueue[len(songQueue)-1].Song.VideoID
 	}
-	songQueue = append(songQueue, struct {
-		requestedBy string
-		song        songrequests.SongResult
-	}{
-		requestedBy: event.ChatterUserLogin,
-		song:        *song,
+	songQueue = append(songQueue, SongQueueItem{
+		RequestedBy: event.ChatterUserLogin,
+		Song:        *song,
 	})
 
 	// save to history

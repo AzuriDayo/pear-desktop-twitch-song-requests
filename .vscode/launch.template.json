@@ -13,15 +13,10 @@
             "cwd": "${workspaceRoot}",
             "buildFlags": [
                 "-ldflags",
-                "-X github.com/azuridayo/pear-desktop-twitch-song-requests/internal/data.twitchClientID=771pv6m10b4nwaytvk48b7m192y2iu"
+                "-X github.com/azuridayo/pear-desktop-twitch-song-requests/internal/data.twitchClientID=771pv6m10b4nwaytvk48b7m192y2iu -X main.listenIP=0.0.0.0"
             ],
             "env": {
                 "CGO_ENABLED": "0"
-            },
-            "windows": {
-                "env": {
-                    "GOEXPERIMENT": "nodwarf5"
-                }
             }
         }
     ]

@@ -54,10 +54,10 @@ func (a *App) handlePearDesktopMsgs() {
 						VideoId:          newVideoId,
 					}
 					playerInfo.Song = songinfo
-					if len(songQueue) > 1 && songQueue[0].song.VideoID != newVideoId {
+					if len(songQueue) > 1 && songQueue[0].Song.VideoID != newVideoId {
 						// queue invalid now, wiping queue
 						log.Println("App internal queue order and ytm queue order mismatched, attempting to recover queue...")
-						recoverVideoId := songQueue[len(songQueue)-1].song.VideoID
+						recoverVideoId := songQueue[len(songQueue)-1].Song.VideoID
 						queue := songrequests.QueueResponse{
 							Items: []struct {
 								PlaylistPanelVideoRenderer        *songrequests.QueueResponsePlaylistPanelVideoRenderer `json:"playlistPanelVideoRenderer"`
@@ -128,18 +128,12 @@ func (a *App) handlePearDesktopMsgs() {
 							failed = true
 						}
 						if !failed {
-							songQueue = []struct {
-								requestedBy string
-								song        songrequests.SongResult
-							}{}
+							songQueue = []SongQueueItem{}
 							for i := fromId; i <= toId; i++ {
 								if queue.Items[i].PlaylistPanelVideoRenderer.VideoId != newVideoId {
-									songQueue = append(songQueue, struct {
-										requestedBy string
-										song        songrequests.SongResult
-									}{
-										requestedBy: "recovered",
-										song: songrequests.SongResult{
+									songQueue = append(songQueue, SongQueueItem{
+										RequestedBy: "recovered",
+										Song: songrequests.SongResult{
 											Title:   queue.Items[i].PlaylistPanelVideoRenderer.Title.Runs[0].Text,
 											Artist:  queue.Items[i].PlaylistPanelVideoRenderer.ShortBylineText.Runs[0].Text,
 											VideoID: queue.Items[i].PlaylistPanelVideoRenderer.VideoId,

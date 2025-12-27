@@ -37,6 +37,6 @@ export const twitchStateSlice = createSlice({
 
 export const { setTwitchInfo } = twitchStateSlice.actions;
 
-export const selectTwitchState = (state: RootState) => state.musicPlayerState;
+export const selectTwitchState = (state: RootState) => state.twitchState;
 
 export default twitchStateSlice.reducer;

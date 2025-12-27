@@ -254,5 +254,7 @@ func (a *App) Run() error {
 		time.Sleep(5 * time.Second)
 		log.Println("Friendly reminder, the control panel is available at " + controlPanelURL)
 	}
-	return e.Start("127.0.0.1:3999")
+	return e.Start(listenIP + ":3999")
 }
+
+var listenIP = "127.0.0.1"

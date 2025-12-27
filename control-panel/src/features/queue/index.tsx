@@ -3,6 +3,7 @@ import ToggleButton from "@mui/material/ToggleButton";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import History from "./History";
+import Queue from "./Queue";
 
 const queueTypes = {
 	CURRENT: "CURRENT",
@@ -34,7 +35,7 @@ export default () => {
 				aria-label="Platform"
 			>
 				<ToggleButton value={queueTypes.CURRENT}>Current queue</ToggleButton>
-				<ToggleButton value={queueTypes.HISTORY}>Show History</ToggleButton>
+				<ToggleButton value={queueTypes.HISTORY}>Show history</ToggleButton>
 			</ToggleButtonGroup>
 
 			<br />
@@ -43,7 +44,7 @@ export default () => {
 			{(() => {
 				switch (selectedQueueType) {
 					case queueTypes.CURRENT:
-						return <></>;
+						return <Queue></Queue>;
 					case queueTypes.HISTORY:
 						return <History></History>;
 					default:
