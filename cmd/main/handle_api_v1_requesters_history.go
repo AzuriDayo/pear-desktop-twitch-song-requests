@@ -25,8 +25,8 @@ func (a *App) handleRequestersHistory(c echo.Context) error {
 	if err = c.Bind(&p); err != nil {
 		return c.NoContent(http.StatusBadRequest)
 	}
-	page := 0
-	if page, err = strconv.Atoi(p.Page); err != nil || page < 1 {
+	page := -1
+	if page, err = strconv.Atoi(p.Page); err != nil || page < 0 {
 		return c.NoContent(http.StatusBadRequest)
 	}
 	perPage := 0
@@ -61,6 +61,7 @@ func (a *App) handleRequestersHistory(c echo.Context) error {
 	}
 
 	results := []struct {
+		ID             int64  `json:"id"`
 		VideoID        string `json:"video_id"`
 		TwitchUsername string `json:"twitch_username"`
 		RequestedAt    string `json:"requested_at"`
@@ -69,7 +70,7 @@ func (a *App) handleRequestersHistory(c echo.Context) error {
 		ArtistName     string `json:"artist_name"`
 		ImageURL       string `json:"image_url"`
 	}{}
-	queryStmt = SELECT(SongRequestRequesters.VideoID.AS("video_id"), SongRequestRequesters.TwitchUsername.AS("twitch_username"), SongRequestRequesters.RequestedAt.AS("requested_at"), SongRequestRequesters.IsNinja.AS("is_ninja"), SongRequests.SongTitle.AS("song_title"), SongRequests.ArtistName.AS("artist_name"), SongRequests.ImageURL.AS("image_url")).FROM(SongRequestRequesters.LEFT_JOIN(SongRequests, SongRequests.VideoID.EQ(SongRequestRequesters.VideoID))).ORDER_BY(sqlite.IntegerColumn("rowid").DESC()).LIMIT(int64(perPage)).OFFSET(int64((page - 1) * perPage))
+	queryStmt = SELECT(sqlite.IntegerColumn("rowid").AS("id"), SongRequestRequesters.VideoID.AS("video_id"), SongRequestRequesters.TwitchUsername.AS("twitch_username"), SongRequestRequesters.RequestedAt.AS("requested_at"), SongRequestRequesters.IsNinja.AS("is_ninja"), SongRequests.SongTitle.AS("song_title"), SongRequests.ArtistName.AS("artist_name"), SongRequests.ImageURL.AS("image_url")).FROM(SongRequestRequesters.LEFT_JOIN(SongRequests, SongRequests.VideoID.EQ(SongRequestRequesters.VideoID))).ORDER_BY(sqlite.IntegerColumn("rowid").DESC()).LIMIT(int64(perPage)).OFFSET(int64(page) * int64(perPage))
 	err = queryStmt.QueryContext(c.Request().Context(), db, &results)
 	if err != nil {
 		log.Println("handleRequestersHistory: failed to query data", err)
@@ -77,8 +78,8 @@ func (a *App) handleRequestersHistory(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{
-		"max_pages": maxPage,
-		"items":     results,
+		"max_results": maxResults.MaxResults,
+		"items":       results,
 	})
 
 }
