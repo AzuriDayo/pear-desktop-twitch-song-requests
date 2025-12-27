@@ -1,16 +1,11 @@
 name: Release
 
 on:
-  push:
-    branches: [master]
-    tags:
-      - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
+  pull_request:
 
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v4
@@ -21,84 +16,51 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-      - id: version-tag-ref
-        run: |
-          if [[ '${{ github.ref_type }}' = 'tag' ]]; then
-            ref='${{ github.ref }}'
-            echo "ref=${ref#refs/tags/}" >>"$GITHUB_OUTPUT"
-            go run -ldflags="-X main.version=${ref#refs/tags/}" ./cmd/validate_semver
-          else
-            echo "ref=v0.0.0+${{ github.sha }}" >>"$GITHUB_OUTPUT"
-          fi
       - shell: bash
         run: |
           pnpm i --frozen-lockfile
           pnpm -r build
           rm -rf cmd/main/build
           mv control-panel/build cmd/main
-          GIT_SHORT_TAG='${{ steps.version-tag-ref.outputs.ref }}' ./build_dist.sh
+          GIT_SHORT_TAG="v0.0.0+${{ github.sha }}" ./build_dist.sh
       - run: |
           mv pear-desktop-twitch-song-requests_windows_amd64.exe pear-desktop-twitch-song-requests_windows_x64.exe
           mv pear-desktop-twitch-song-requests_windows_arm64.exe pear-desktop-twitch-song-requests_windows_on_arm.exe
           mv pear-desktop-twitch-song-requests_darwin_amd64 pear-desktop-twitch-song-requests_macos_intel
           mv pear-desktop-twitch-song-requests_darwin_arm64 pear-desktop-twitch-song-requests_macos_apple_silicon
-      - if: github.ref_type != 'tag'
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: pear-desktop-twitch-song-requests_windows_x64
           path: pear-desktop-twitch-song-requests_windows_x64.exe
           compression-level: 0
           if-no-files-found: error
-      - if: github.ref_type != 'tag'
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: pear-desktop-twitch-song-requests_windows_on_arm
           path: pear-desktop-twitch-song-requests_windows_on_arm.exe
           compression-level: 0
           if-no-files-found: error
-      - if: github.ref_type != 'tag'
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: pear-desktop-twitch-song-requests_macos_intel
           path: pear-desktop-twitch-song-requests_macos_intel
           compression-level: 0
           if-no-files-found: error
-      - if: github.ref_type != 'tag'
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: pear-desktop-twitch-song-requests_macos_apple_silicon
           path: pear-desktop-twitch-song-requests_macos_apple_silicon
           compression-level: 0
           if-no-files-found: error
-      - if: github.ref_type != 'tag'
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: pear-desktop-twitch-song-requests_linux_amd64
           path: pear-desktop-twitch-song-requests_linux_amd64
           compression-level: 0
           if-no-files-found: error
-      - if: github.ref_type != 'tag'
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: pear-desktop-twitch-song-requests_linux_arm64
           path: pear-desktop-twitch-song-requests_linux_arm64
           compression-level: 0
           if-no-files-found: error
-      - uses: softprops/action-gh-release@v2
-        if: github.ref_type == 'tag'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          name: Release ${{ steps.version-tag-ref.outputs.ref }}
-          prerelease: ${{ contains(github.ref, '-rc') }}
-          make_latest: true
-          generate_release_notes: true
-          preserve_order: true
-          fail_on_unmatched_files: true
-          files: |
-            pear-desktop-twitch-song-requests_windows_x64.exe
-            pear-desktop-twitch-song-requests_windows_on_arm.exe
-            pear-desktop-twitch-song-requests_linux_amd64
-            pear-desktop-twitch-song-requests_linux_arm64
-            pear-desktop-twitch-song-requests_macos_intel
-            pear-desktop-twitch-song-requests_macos_apple_silicon
