@@ -224,6 +224,8 @@ func (a *App) Run() error {
 	apiV1.POST("/twitch-oauth", a.processTwitchOAuth)
 	apiV1.PATCH("/settings", a.processTwitchSettings)
 	apiV1.GET("/ws", a.handleAppWs)
+	apiV1Requesters := apiV1.Group("/requesters")
+	apiV1Requesters.GET("/history", a.handleRequestersHistory)
 
 	var cmd string
 	var args []string
