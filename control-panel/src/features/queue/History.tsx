@@ -52,7 +52,7 @@ const History = () => {
 			disableColumnMenu: true,
 			width: 150,
 			renderCell: (params: GridRenderCellParams<IRequesterData>) => (
-				<span>{params.value}</span>
+				<span>{params.value + (params.row.is_ninja ? " 🥷" : "")}</span>
 			),
 		},
 		{

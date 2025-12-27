@@ -11,6 +11,7 @@ import { TwitchSuccess } from "./features/oauthtwitch/TwitchSuccess.tsx";
 import { TwitchWS } from "./features/twitchws/TwitchWS.tsx";
 import { Home } from "./Home.tsx";
 import { Settings } from "./components/Settings.tsx";
+import Queue from "./features/queue/index.tsx";
 
 const root = ReactDOM.createRoot(
 	document.getElementById("root") as HTMLElement,
@@ -25,7 +26,7 @@ root.render(
 				<Routes>
 					<Route path="/" element={<Home />} />
 					<Route path="/settings" element={<Settings />} />
-					<Route path="/queue" element={<>queue</>} />
+					<Route path="/queue" element={<Queue />} />
 					<Route path="/oauth">
 						<Route
 							path="twitch-connect"

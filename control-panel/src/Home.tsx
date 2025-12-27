@@ -65,8 +65,12 @@ export function Home() {
 			setBotExpiryState(expiryState.SOON);
 		}
 	}, [twitchState]);
-	return (
+	return twitchState.isLoaded ? (
 		<div>
+			<Link to="/queue">View song queue and history</Link>
+			<br />
+			<br />
+			<br />
 			<Link to="/oauth/twitch-connect">
 				{twitchState.login !== ""
 					? "Refresh Twitch token"
@@ -103,5 +107,7 @@ export function Home() {
 			<br />
 			<Link to="/settings">Configure settings</Link>
 		</div>
+	) : (
+		<h3>Loading...</h3>
 	);
 }
