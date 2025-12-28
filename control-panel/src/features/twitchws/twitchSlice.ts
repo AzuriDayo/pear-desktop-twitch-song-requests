@@ -3,6 +3,7 @@ import type { RootState } from "../../app/store";
 
 // Define a type for the slice state
 export interface ITwitchState {
+	isLoaded: boolean;
 	expires_in: string;
 	hostname: string;
 	twitch_song_request_reward_id: string;
@@ -12,6 +13,7 @@ export interface ITwitchState {
 }
 
 const initialState: ITwitchState = {
+	isLoaded: false,
 	expires_in: "",
 	hostname: "127.0.0.1:3999",
 	twitch_song_request_reward_id: "",
@@ -25,6 +27,7 @@ export const twitchStateSlice = createSlice({
 	initialState,
 	reducers: {
 		setTwitchInfo: (state, action: PayloadAction<Partial<ITwitchState>>) => {
+			state.isLoaded = true;
 			for (const [key, value] of Object.entries(action.payload)) {
 				(state as any)[key] = value as any;
 			}
@@ -34,6 +37,6 @@ export const twitchStateSlice = createSlice({
 
 export const { setTwitchInfo } = twitchStateSlice.actions;
 
-export const selectTwitchState = (state: RootState) => state.musicPlayerState;
+export const selectTwitchState = (state: RootState) => state.twitchState;
 
 export default twitchStateSlice.reducer;

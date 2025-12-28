@@ -56,56 +56,36 @@ func Migrate() error {
 	if err != nil {
 		return err
 	}
+	defer m.Close()
+
+	log.Println("Please wait while the data structure updates, this can take a few minutes...")
 	uperr := m.Up()
 	if uperr != nil && uperr != migrate.ErrNoChange {
-		m.Close()
-		// attempt recovery force down
-		log.Println("Migration failed, recovering...")
-
-		dB, err := NewDBConnection()
+		log.Println("Failed to upgrade data structure")
+		version, dirty, err := m.Version()
 		if err != nil {
-			log.Println("Migration recovery failed to connect to database")
-			return err
-		}
-		stmt, err := dB.Prepare("SELECT version, dirty FROM schema_migrations LIMIT 1")
-		if err != nil {
-			log.Println("Migration recovery failed to prepare statement to get database migration version")
-			dB.Close()
-			return err
-		}
-		version := uint64(0)
-		dirty := false
-
-		row := stmt.QueryRow()
-		err = row.Scan(&version, &dirty)
-		if err != nil {
-			log.Println("Migration recovery failed to fetch db version and dirty state")
-			dB.Close()
-			return err
-		}
-		if !dirty {
-			log.Println("Migration recovery not necessary, schema is not dirty")
-			dB.Close()
+			log.Println("Failed to get data structure version", err)
+			// nothing to do, cannot get version
 			return uperr
 		}
-		dB.Close()
-
-		// close db to allow migrate engine to take over
-		m, err = getMigrator()
-		if err != nil {
-			return err
+		if !dirty {
+			log.Println("No data corrupted, simply re-launch app")
+			// nothing to do, cannot revert non-dirty db
+			return uperr
 		}
-		defer m.Close()
-		forceVersion := version - 1
-		log.Println("Migration recovery will force schema back 1 version, to version", forceVersion)
-		err = m.Force(int(forceVersion))
-		if err != nil {
-			log.Println("Migration recovery failed to force version to", forceVersion)
-			return err
+		if version > 0 {
+			log.Println("0/2 Attempting recovery...")
+			// apply recovery
+			err := m.Force(int(version))
+			log.Println("1/2 Force data version", version, "successful:", err == nil)
+			err = m.Steps(-1)
+			log.Println("2/2 Downgrade data version successful:", err == nil)
+			// db ready for migration re-attempt
 		}
-		log.Println("Migration recovery forced version to", forceVersion)
+		log.Println("Sorry, something is terribly wrong with the app.")
+		log.Println("Take a screenshot of this window and please report this bug to Azuri.")
 		return uperr
 	}
-	m.Close()
+	log.Println("Data structure updates complete.")
 	return nil
 }

@@ -224,6 +224,8 @@ func (a *App) Run() error {
 	apiV1.POST("/twitch-oauth", a.processTwitchOAuth)
 	apiV1.PATCH("/settings", a.processTwitchSettings)
 	apiV1.GET("/ws", a.handleAppWs)
+	apiV1Requesters := apiV1.Group("/requesters")
+	apiV1Requesters.GET("/history", a.handleRequestersHistory)
 
 	var cmd string
 	var args []string
@@ -236,7 +238,8 @@ func (a *App) Run() error {
 	default: // "linux", "freebsd", "openbsd", "netbsd"
 		cmd = "xdg-open"
 	}
-	args = append(args, "http://localhost:3999/") // must use localhost here because twitch does not allow 127.0.0.1
+	controlPanelURL := "http://localhost:3999/"
+	args = append(args, controlPanelURL) // must use localhost here because twitch does not allow 127.0.0.1
 	twitchTokenExpiresSoon := a.twitchDataStruct.isAuthenticated && time.Now().Add(-15*24*time.Hour).After(a.twitchDataStruct.expiresDate)
 	if a.twitchDataStruct.isAuthenticated && twitchTokenExpiresSoon {
 		log.Println("ALERT! Main account Token expiry is soon, consider refreshing token.")
@@ -249,7 +252,9 @@ func (a *App) Run() error {
 		exec.Command(cmd, args...).Start()
 	} else {
 		time.Sleep(5 * time.Second)
-		log.Println("Friendly reminder, the control panel is available at http://localhost:3999/")
+		log.Println("Friendly reminder, the control panel is available at " + controlPanelURL)
 	}
-	return e.Start("127.0.0.1:3999")
+	return e.Start(listenIP + ":3999")
 }
+
+var listenIP = "127.0.0.1"

@@ -1,8 +1,8 @@
 import {
-	ActionCreatorWithPayload,
 	Dispatch,
 	UnknownAction,
 } from "@reduxjs/toolkit";
+import { setSongInfo } from "./musicPlayerSlice";
 
 interface IMsgTypeShuffleChanged {
 	type: "SHUFFLE_CHANGED";
@@ -77,22 +77,6 @@ enum MediaType {
 export const handleWsMessages = (
 	data: string,
 	dispatch: Dispatch<UnknownAction>,
-	{
-		setSongInfo,
-	}: {
-		setSongInfo: ActionCreatorWithPayload<
-			Partial<{
-				albumArtUrl: string;
-				artistName: string;
-				elapsedTime: number;
-				isPlaying: boolean;
-				songLength: number;
-				songName: string;
-				videoUrl: string;
-			}>,
-			"musicplayerstate/setSongInfo"
-		>;
-	},
 ) => {
 	try {
 		const msgData:

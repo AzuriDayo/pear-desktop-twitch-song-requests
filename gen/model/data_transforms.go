@@ -7,10 +7,7 @@
 
 package model
 
-type SongRequestRequesters struct {
-	VideoID        string
-	TwitchUsername string
-	RequestedAt    string
-	UserID         string
-	IsNinja        bool
+type DataTransforms struct {
+	Key   string `sql:"primary_key"`
+	Value bool
 }
