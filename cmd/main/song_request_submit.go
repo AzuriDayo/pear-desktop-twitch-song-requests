@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/songrequests"
 	"github.com/joeyak/go-twitch-eventsub/v3"
@@ -13,7 +14,7 @@ import (
 
 func (a *App) songRequestSubmit(useProperHelix *helix.Client, properUserID string, event twitch.EventChannelChatMessage) {
 	s := songrequests.ParseSearchQuery(event.Message.Text)
-	song, err := songrequests.SearchSong(s, 60, 600)
+	song, err := songrequests.SearchSong(strings.TrimPrefix(s, "-"), 60, 600)
 	if err != nil {
 		return
 	}
