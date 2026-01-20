@@ -1,7 +1,4 @@
-import {
-	Dispatch,
-	UnknownAction,
-} from "@reduxjs/toolkit";
+import { Dispatch, UnknownAction } from "@reduxjs/toolkit";
 import { setSongInfo } from "./musicPlayerSlice";
 
 interface IMsgTypeShuffleChanged {
