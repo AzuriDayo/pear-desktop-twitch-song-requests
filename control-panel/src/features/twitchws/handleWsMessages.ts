@@ -1,10 +1,10 @@
-import { Dispatch, UnknownAction } from "@reduxjs/toolkit";
+import { type Dispatch, type UnknownAction } from "@reduxjs/toolkit";
 import { setTwitchInfo } from "./twitchSlice";
 import {
 	addSong,
 	setQueueInfo,
 	shiftQueue,
-	SongQueueItem,
+	type SongQueueItem,
 } from "./songQueueSlice";
 
 export const handleWsMessages = (

@@ -3,7 +3,7 @@ import Paper from "@mui/material/Paper";
 import { useEffect, useState } from "react";
 import {
 	DataGrid,
-	GridRenderCellParams,
+	type GridRenderCellParams,
 	type GridColDef,
 } from "@mui/x-data-grid";
 

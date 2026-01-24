@@ -1,4 +1,4 @@
-import { Dispatch, UnknownAction } from "@reduxjs/toolkit";
+import { type Dispatch, type UnknownAction } from "@reduxjs/toolkit";
 import { setSongInfo } from "./musicPlayerSlice";
 
 interface IMsgTypeShuffleChanged {
@@ -63,13 +63,15 @@ export interface SongInfo {
 	tags?: string[];
 }
 
-enum MediaType {
-	Audio = "AUDIO",
-	OriginalMusicVideo = "ORIGINAL_MUSIC_VIDEO",
-	UserGeneratedContent = "USER_GENERATED_CONTENT",
-	PodcastEpisode = "PODCAST_EPISODE",
-	OtherVideo = "OTHER_VIDEO",
-}
+const EMediaType = {
+	Audio: "AUDIO",
+	OriginalMusicVideo: "ORIGINAL_MUSIC_VIDEO",
+	UserGeneratedContent: "USER_GENERATED_CONTENT",
+	PodcastEpisode: "PODCAST_EPISODE",
+	OtherVideo: "OTHER_VIDEO",
+} as const;
+
+type MediaType = (typeof EMediaType)[keyof typeof EMediaType];
 
 export const handleWsMessages = (
 	data: string,
