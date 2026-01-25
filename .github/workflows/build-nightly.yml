@@ -1,4 +1,4 @@
-name: Release
+name: Build nightly
 
 on:
   pull_request:
@@ -11,18 +11,27 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v6
+      - uses: oven-sh/setup-bun@v2
         with:
-          node-version-file: .node-version
-          cache: pnpm
+          bun-version-file: ".bun-version"
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
+      - name: Get bun cache dir
+        id: bun-install-cache-dir
+        run: echo "dir=$(bun pm cache)" >>"$GITHUB_OUTPUT"
+      - name: Cache bun deps
+        uses: actions/cache@v5
+        with:
+          path: |
+            ${{ steps.bun-install-cache-dir.outputs.dir }}
+          key: |
+            ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+            ${{ runner.os }}-bun-
       - shell: bash
         run: |
-          pnpm i --frozen-lockfile
-          pnpm -r build
+          bun i --frozen-lockfile
+          bun --workspaces run build
           rm -rf cmd/main/build
           mv control-panel/build cmd/main
           GIT_SHORT_TAG="v0.0.0+${{ github.sha }}" ./build_dist.sh
