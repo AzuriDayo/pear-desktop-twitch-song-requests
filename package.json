@@ -1,15 +1,12 @@
 {
   "name": "pear-desktop-twitch-song-requests",
-  "productName": "pear-desktop-twitch-song-requests",
   "version": "1.0.0",
-  "scripts": {},
-  "keywords": [],
   "author": {
     "name": "SLAzurin",
     "email": "69220163+SLAzurin@users.noreply.github.com"
   },
-  "license": "MIT",
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
     "@types/node": "^24.10.9",
     "eslint": "^9.39.2",
     "eslint-plugin-react-hooks": "^7.0.1",
@@ -19,9 +16,13 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.53.1"
   },
+  "keywords": [],
+  "license": "MIT",
   "overrides": {
     "happy-dom@<20.0.0": ">=20.0.0"
   },
+  "productName": "pear-desktop-twitch-song-requests",
+  "scripts": {},
   "workspaces": [
     "control-panel"
   ]
