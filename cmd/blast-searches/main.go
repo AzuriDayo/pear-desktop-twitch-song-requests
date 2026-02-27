@@ -8,10 +8,11 @@ import (
 
 func main() {
 	songs := []string{
-		"!sr yena nemonemo",
-		"!sr yena good morning",
-		"!sr yena being a good girl hurts",
-		"!sr yena smartphone",
+		// "!sr yena nemonemo",
+		// "!sr yena good morning",
+		// "!sr yena being a good girl hurts",
+		// "!sr yena smartphone",
+		"!sr BKNYZpVo0Vo",
 	}
 	for _, v := range songs {
 		v = songrequests.ParseSearchQuery(v)
@@ -19,6 +20,6 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		log.Println(song.Title, song.SearchOrigin, song.ImageUrl)
+		log.Println(song.Title, song.VideoID, song.SearchOrigin, song.ImageUrl, song.RawTimeData)
 	}
 }

@@ -107,11 +107,4 @@ func (a *App) songRequestSubmit(useProperHelix *helix.Client, properUserID strin
 		Message:              "Added song: " + song.Title + " - " + song.Artist + " " + "https://youtu.be/" + song.VideoID,
 		ReplyParentMessageID: event.MessageId,
 	})
-	srChan <- struct {
-		song  *songrequests.SongResult
-		event twitch.EventChannelChatMessage
-	}{
-		song:  song,
-		event: event,
-	}
 }

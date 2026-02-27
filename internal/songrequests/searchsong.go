@@ -2,13 +2,16 @@ package songrequests
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/azuridayo/pear-desktop-twitch-song-requests/gen/pearsdk"
 	"github.com/labstack/echo/v4"
 )
 
@@ -154,6 +157,16 @@ func SearchSong(query string, minLength int, maxLength int) (*SongResult, error)
 		"query": strings.TrimSpace(query),
 	}
 	ib, _ := json.Marshal(inBody)
+	sdkClient := pearsdk.NewAPIClient(&pearsdk.Configuration{
+		Host:      pearDesktopHost,
+		Debug:     true,
+		Scheme:    "http:",
+	})
+	rr, htr2, err2 := sdkClient.DefaultAPI.ApiV1SearchPost(context.Background()).
+		ApiV1SearchPostRequest(*pearsdk.NewApiV1SearchPostRequest(strings.TrimSpace(query))).
+		Execute()
+	log.Println(htr2, err2)
+	log.Println(rr)
 	resp, err := http.Post("http://"+pearDesktopHost+"/api/v1/search", "application/json", bytes.NewBuffer(ib))
 	if err != nil {
 		return nil, err

@@ -199,13 +199,6 @@ func (a *App) Run() error {
 		}
 	}()
 
-	// Process song requests
-	go func() {
-		for msg := range srChan {
-			a.songRequestLogic(msg.song, msg.event)
-		}
-	}()
-
 	// Echo instance
 	e := echo.New()
 	e.HideBanner = true
