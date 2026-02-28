@@ -1,6 +1,6 @@
 # \DefaultAPI
 
-All URIs are relative to *http://localhost*
+All URIs are relative to *http://127.0.0.1:26538*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------

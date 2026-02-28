@@ -158,9 +158,8 @@ func SearchSong(query string, minLength int, maxLength int) (*SongResult, error)
 	}
 	ib, _ := json.Marshal(inBody)
 	sdkClient := pearsdk.NewAPIClient(&pearsdk.Configuration{
-		Host:      pearDesktopHost,
-		Debug:     true,
-		Scheme:    "http:",
+		Host:  pearDesktopHost,
+		Debug: true,
 	})
 	rr, htr2, err2 := sdkClient.DefaultAPI.ApiV1SearchPost(context.Background()).
 		ApiV1SearchPostRequest(*pearsdk.NewApiV1SearchPostRequest(strings.TrimSpace(query))).
