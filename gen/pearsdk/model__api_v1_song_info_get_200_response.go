@@ -25,12 +25,12 @@ type ApiV1SongInfoGet200Response struct {
 	Artist string `json:"artist"`
 	Views float32 `json:"views"`
 	UploadDate *string `json:"uploadDate,omitempty"`
-	ImageSrc *string `json:"imageSrc,omitempty"`
+	ImageSrc NullableString `json:"imageSrc,omitempty"`
 	IsPaused *bool `json:"isPaused,omitempty"`
 	SongDuration float32 `json:"songDuration"`
 	ElapsedSeconds *float32 `json:"elapsedSeconds,omitempty"`
 	Url *string `json:"url,omitempty"`
-	Album *string `json:"album,omitempty"`
+	Album NullableString `json:"album,omitempty"`
 	VideoId string `json:"videoId"`
 	PlaylistId *string `json:"playlistId,omitempty"`
 	MediaType string `json:"mediaType"`
@@ -165,36 +165,46 @@ func (o *ApiV1SongInfoGet200Response) SetUploadDate(v string) {
 	o.UploadDate = &v
 }
 
-// GetImageSrc returns the ImageSrc field value if set, zero value otherwise.
+// GetImageSrc returns the ImageSrc field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *ApiV1SongInfoGet200Response) GetImageSrc() string {
-	if o == nil || IsNil(o.ImageSrc) {
+	if o == nil || IsNil(o.ImageSrc.Get()) {
 		var ret string
 		return ret
 	}
-	return *o.ImageSrc
+	return *o.ImageSrc.Get()
 }
 
 // GetImageSrcOk returns a tuple with the ImageSrc field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *ApiV1SongInfoGet200Response) GetImageSrcOk() (*string, bool) {
-	if o == nil || IsNil(o.ImageSrc) {
+	if o == nil {
 		return nil, false
 	}
-	return o.ImageSrc, true
+	return o.ImageSrc.Get(), o.ImageSrc.IsSet()
 }
 
 // HasImageSrc returns a boolean if a field has been set.
 func (o *ApiV1SongInfoGet200Response) HasImageSrc() bool {
-	if o != nil && !IsNil(o.ImageSrc) {
+	if o != nil && o.ImageSrc.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetImageSrc gets a reference to the given string and assigns it to the ImageSrc field.
+// SetImageSrc gets a reference to the given NullableString and assigns it to the ImageSrc field.
 func (o *ApiV1SongInfoGet200Response) SetImageSrc(v string) {
-	o.ImageSrc = &v
+	o.ImageSrc.Set(&v)
+}
+// SetImageSrcNil sets the value for ImageSrc to be an explicit nil
+func (o *ApiV1SongInfoGet200Response) SetImageSrcNil() {
+	o.ImageSrc.Set(nil)
+}
+
+// UnsetImageSrc ensures that no value is present for ImageSrc, not even an explicit nil
+func (o *ApiV1SongInfoGet200Response) UnsetImageSrc() {
+	o.ImageSrc.Unset()
 }
 
 // GetIsPaused returns the IsPaused field value if set, zero value otherwise.
@@ -317,36 +327,46 @@ func (o *ApiV1SongInfoGet200Response) SetUrl(v string) {
 	o.Url = &v
 }
 
-// GetAlbum returns the Album field value if set, zero value otherwise.
+// GetAlbum returns the Album field value if set, zero value otherwise (both if not set or set to explicit null).
 func (o *ApiV1SongInfoGet200Response) GetAlbum() string {
-	if o == nil || IsNil(o.Album) {
+	if o == nil || IsNil(o.Album.Get()) {
 		var ret string
 		return ret
 	}
-	return *o.Album
+	return *o.Album.Get()
 }
 
 // GetAlbumOk returns a tuple with the Album field value if set, nil otherwise
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *ApiV1SongInfoGet200Response) GetAlbumOk() (*string, bool) {
-	if o == nil || IsNil(o.Album) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Album, true
+	return o.Album.Get(), o.Album.IsSet()
 }
 
 // HasAlbum returns a boolean if a field has been set.
 func (o *ApiV1SongInfoGet200Response) HasAlbum() bool {
-	if o != nil && !IsNil(o.Album) {
+	if o != nil && o.Album.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetAlbum gets a reference to the given string and assigns it to the Album field.
+// SetAlbum gets a reference to the given NullableString and assigns it to the Album field.
 func (o *ApiV1SongInfoGet200Response) SetAlbum(v string) {
-	o.Album = &v
+	o.Album.Set(&v)
+}
+// SetAlbumNil sets the value for Album to be an explicit nil
+func (o *ApiV1SongInfoGet200Response) SetAlbumNil() {
+	o.Album.Set(nil)
+}
+
+// UnsetAlbum ensures that no value is present for Album, not even an explicit nil
+func (o *ApiV1SongInfoGet200Response) UnsetAlbum() {
+	o.Album.Unset()
 }
 
 // GetVideoId returns the VideoId field value
@@ -445,8 +465,8 @@ func (o ApiV1SongInfoGet200Response) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.UploadDate) {
 		toSerialize["uploadDate"] = o.UploadDate
 	}
-	if !IsNil(o.ImageSrc) {
-		toSerialize["imageSrc"] = o.ImageSrc
+	if o.ImageSrc.IsSet() {
+		toSerialize["imageSrc"] = o.ImageSrc.Get()
 	}
 	if !IsNil(o.IsPaused) {
 		toSerialize["isPaused"] = o.IsPaused
@@ -458,8 +478,8 @@ func (o ApiV1SongInfoGet200Response) ToMap() (map[string]interface{}, error) {
 	if !IsNil(o.Url) {
 		toSerialize["url"] = o.Url
 	}
-	if !IsNil(o.Album) {
-		toSerialize["album"] = o.Album
+	if o.Album.IsSet() {
+		toSerialize["album"] = o.Album.Get()
 	}
 	toSerialize["videoId"] = o.VideoId
 	if !IsNil(o.PlaylistId) {

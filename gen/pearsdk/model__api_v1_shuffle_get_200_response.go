@@ -21,7 +21,7 @@ var _ MappedNullable = &ApiV1ShuffleGet200Response{}
 
 // ApiV1ShuffleGet200Response struct for ApiV1ShuffleGet200Response
 type ApiV1ShuffleGet200Response struct {
-	State bool `json:"state"`
+	State NullableBool `json:"state"`
 }
 
 type _ApiV1ShuffleGet200Response ApiV1ShuffleGet200Response
@@ -30,7 +30,7 @@ type _ApiV1ShuffleGet200Response ApiV1ShuffleGet200Response
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewApiV1ShuffleGet200Response(state bool) *ApiV1ShuffleGet200Response {
+func NewApiV1ShuffleGet200Response(state NullableBool) *ApiV1ShuffleGet200Response {
 	this := ApiV1ShuffleGet200Response{}
 	this.State = state
 	return &this
@@ -45,27 +45,29 @@ func NewApiV1ShuffleGet200ResponseWithDefaults() *ApiV1ShuffleGet200Response {
 }
 
 // GetState returns the State field value
+// If the value is explicit nil, the zero value for bool will be returned
 func (o *ApiV1ShuffleGet200Response) GetState() bool {
-	if o == nil {
+	if o == nil || o.State.Get() == nil {
 		var ret bool
 		return ret
 	}
 
-	return o.State
+	return *o.State.Get()
 }
 
 // GetStateOk returns a tuple with the State field value
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *ApiV1ShuffleGet200Response) GetStateOk() (*bool, bool) {
 	if o == nil {
 		return nil, false
 	}
-	return &o.State, true
+	return o.State.Get(), o.State.IsSet()
 }
 
 // SetState sets field value
 func (o *ApiV1ShuffleGet200Response) SetState(v bool) {
-	o.State = v
+	o.State.Set(&v)
 }
 
 func (o ApiV1ShuffleGet200Response) MarshalJSON() ([]byte, error) {
@@ -78,7 +80,7 @@ func (o ApiV1ShuffleGet200Response) MarshalJSON() ([]byte, error) {
 
 func (o ApiV1ShuffleGet200Response) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
-	toSerialize["state"] = o.State
+	toSerialize["state"] = o.State.Get()
 	return toSerialize, nil
 }
 

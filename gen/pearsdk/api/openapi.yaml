@@ -1,4 +1,4 @@
-openapi: 3.1.0
+openapi: 3.0.3
 info:
   description: "Note: You need to get an access token using the `/auth/{id}` endpoint\
     \ first to call any API endpoints under `/api`."
@@ -299,8 +299,8 @@ paths:
         required: false
         schema:
           minimum: 0
-          type: integer
           nullable: true
+          type: integer
         style: simple
       responses:
         "204":
@@ -315,8 +315,8 @@ paths:
         required: false
         schema:
           minimum: 0
-          type: integer
           nullable: true
+          type: integer
         style: simple
       requestBody:
         content:
@@ -387,25 +387,28 @@ components:
           - DISLIKE
           - INDIFFERENT
           - LIKE
-          type: string
           nullable: true
+          type: string
       required:
       - state
+      type: object
     _api_v1_seek_to_post_request:
       properties:
         seconds:
           type: number
       required:
       - seconds
+      type: object
     _api_v1_shuffle_get_200_response:
       example:
         state: true
       properties:
         state:
-          type: boolean
           nullable: true
+          type: boolean
       required:
       - state
+      type: object
     _api_v1_repeat_mode_get_200_response:
       example:
         mode: ONE
@@ -415,16 +418,18 @@ components:
           - ONE
           - NONE
           - ALL
-          type: string
           nullable: true
+          type: string
       required:
       - mode
+      type: object
     _api_v1_switch_repeat_post_request:
       properties:
         iteration:
           type: number
       required:
       - iteration
+      type: object
     _api_v1_volume_get_200_response:
       example:
         state: 0.8008281904610115
@@ -437,12 +442,14 @@ components:
       required:
       - isMuted
       - state
+      type: object
     _api_v1_volume_post_request:
       properties:
         volume:
           type: number
       required:
       - volume
+      type: object
     _api_v1_fullscreen_get_200_response:
       example:
         state: true
@@ -451,6 +458,7 @@ components:
           type: boolean
       required:
       - state
+      type: object
     _api_v1_song_info_get_200_response:
       example:
         playlistId: playlistId
@@ -476,8 +484,8 @@ components:
         uploadDate:
           type: string
         imageSrc:
-          type: string
           nullable: true
+          type: string
         isPaused:
           type: boolean
         songDuration:
@@ -487,8 +495,8 @@ components:
         url:
           type: string
         album:
-          type: string
           nullable: true
+          type: string
         videoId:
           type: string
         playlistId:
@@ -508,6 +516,7 @@ components:
       - title
       - videoId
       - views
+      type: object
     _api_v1_queue_post_request:
       properties:
         videoId:
@@ -520,6 +529,7 @@ components:
           type: string
       required:
       - videoId
+      type: object
     _api_v1_queue_patch_request:
       properties:
         index:
@@ -527,12 +537,14 @@ components:
           type: integer
       required:
       - index
+      type: object
     _api_v1_queue__index__patch_request:
       properties:
         toIndex:
           type: number
       required:
       - toIndex
+      type: object
     _api_v1_search_post_request:
       properties:
         query:
@@ -543,6 +555,7 @@ components:
           type: string
       required:
       - query
+      type: object
     _auth__id__post_200_response:
       example:
         accessToken: accessToken
@@ -551,6 +564,7 @@ components:
           type: string
       required:
       - accessToken
+      type: object
   securitySchemes:
     bearerAuth:
       bearerFormat: JWT

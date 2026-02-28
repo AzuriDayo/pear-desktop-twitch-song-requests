@@ -4,13 +4,13 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**State** | **bool** |  | 
+**State** | **NullableBool** |  | 
 
 ## Methods
 
 ### NewApiV1ShuffleGet200Response
 
-`func NewApiV1ShuffleGet200Response(state bool, ) *ApiV1ShuffleGet200Response`
+`func NewApiV1ShuffleGet200Response(state NullableBool, ) *ApiV1ShuffleGet200Response`
 
 NewApiV1ShuffleGet200Response instantiates a new ApiV1ShuffleGet200Response object
 This constructor will assign default values to properties that have it defined,
@@ -45,6 +45,16 @@ and a boolean to check if the value has been set.
 SetState sets State field to given value.
 
 
+### SetStateNil
+
+`func (o *ApiV1ShuffleGet200Response) SetStateNil(b bool)`
+
+ SetStateNil sets the value for State to be an explicit nil
+
+### UnsetState
+`func (o *ApiV1ShuffleGet200Response) UnsetState()`
+
+UnsetState ensures that no value is present for State, not even an explicit nil
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

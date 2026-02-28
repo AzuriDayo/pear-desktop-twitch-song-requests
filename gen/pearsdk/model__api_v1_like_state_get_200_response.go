@@ -21,7 +21,7 @@ var _ MappedNullable = &ApiV1LikeStateGet200Response{}
 
 // ApiV1LikeStateGet200Response struct for ApiV1LikeStateGet200Response
 type ApiV1LikeStateGet200Response struct {
-	State string `json:"state"`
+	State NullableString `json:"state"`
 }
 
 type _ApiV1LikeStateGet200Response ApiV1LikeStateGet200Response
@@ -30,7 +30,7 @@ type _ApiV1LikeStateGet200Response ApiV1LikeStateGet200Response
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewApiV1LikeStateGet200Response(state string) *ApiV1LikeStateGet200Response {
+func NewApiV1LikeStateGet200Response(state NullableString) *ApiV1LikeStateGet200Response {
 	this := ApiV1LikeStateGet200Response{}
 	this.State = state
 	return &this
@@ -45,27 +45,29 @@ func NewApiV1LikeStateGet200ResponseWithDefaults() *ApiV1LikeStateGet200Response
 }
 
 // GetState returns the State field value
+// If the value is explicit nil, the zero value for string will be returned
 func (o *ApiV1LikeStateGet200Response) GetState() string {
-	if o == nil {
+	if o == nil || o.State.Get() == nil {
 		var ret string
 		return ret
 	}
 
-	return o.State
+	return *o.State.Get()
 }
 
 // GetStateOk returns a tuple with the State field value
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *ApiV1LikeStateGet200Response) GetStateOk() (*string, bool) {
 	if o == nil {
 		return nil, false
 	}
-	return &o.State, true
+	return o.State.Get(), o.State.IsSet()
 }
 
 // SetState sets field value
 func (o *ApiV1LikeStateGet200Response) SetState(v string) {
-	o.State = v
+	o.State.Set(&v)
 }
 
 func (o ApiV1LikeStateGet200Response) MarshalJSON() ([]byte, error) {
@@ -78,7 +80,7 @@ func (o ApiV1LikeStateGet200Response) MarshalJSON() ([]byte, error) {
 
 func (o ApiV1LikeStateGet200Response) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
-	toSerialize["state"] = o.State
+	toSerialize["state"] = o.State.Get()
 	return toSerialize, nil
 }
 

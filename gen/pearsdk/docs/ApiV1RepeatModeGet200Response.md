@@ -4,13 +4,13 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**Mode** | **string** |  | 
+**Mode** | **NullableString** |  | 
 
 ## Methods
 
 ### NewApiV1RepeatModeGet200Response
 
-`func NewApiV1RepeatModeGet200Response(mode string, ) *ApiV1RepeatModeGet200Response`
+`func NewApiV1RepeatModeGet200Response(mode NullableString, ) *ApiV1RepeatModeGet200Response`
 
 NewApiV1RepeatModeGet200Response instantiates a new ApiV1RepeatModeGet200Response object
 This constructor will assign default values to properties that have it defined,
@@ -45,6 +45,16 @@ and a boolean to check if the value has been set.
 SetMode sets Mode field to given value.
 
 
+### SetModeNil
+
+`func (o *ApiV1RepeatModeGet200Response) SetModeNil(b bool)`
+
+ SetModeNil sets the value for Mode to be an explicit nil
+
+### UnsetMode
+`func (o *ApiV1RepeatModeGet200Response) UnsetMode()`
+
+UnsetMode ensures that no value is present for Mode, not even an explicit nil
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

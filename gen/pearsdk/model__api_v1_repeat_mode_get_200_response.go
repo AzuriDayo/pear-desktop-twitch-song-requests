@@ -21,7 +21,7 @@ var _ MappedNullable = &ApiV1RepeatModeGet200Response{}
 
 // ApiV1RepeatModeGet200Response struct for ApiV1RepeatModeGet200Response
 type ApiV1RepeatModeGet200Response struct {
-	Mode string `json:"mode"`
+	Mode NullableString `json:"mode"`
 }
 
 type _ApiV1RepeatModeGet200Response ApiV1RepeatModeGet200Response
@@ -30,7 +30,7 @@ type _ApiV1RepeatModeGet200Response ApiV1RepeatModeGet200Response
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewApiV1RepeatModeGet200Response(mode string) *ApiV1RepeatModeGet200Response {
+func NewApiV1RepeatModeGet200Response(mode NullableString) *ApiV1RepeatModeGet200Response {
 	this := ApiV1RepeatModeGet200Response{}
 	this.Mode = mode
 	return &this
@@ -45,27 +45,29 @@ func NewApiV1RepeatModeGet200ResponseWithDefaults() *ApiV1RepeatModeGet200Respon
 }
 
 // GetMode returns the Mode field value
+// If the value is explicit nil, the zero value for string will be returned
 func (o *ApiV1RepeatModeGet200Response) GetMode() string {
-	if o == nil {
+	if o == nil || o.Mode.Get() == nil {
 		var ret string
 		return ret
 	}
 
-	return o.Mode
+	return *o.Mode.Get()
 }
 
 // GetModeOk returns a tuple with the Mode field value
 // and a boolean to check if the value has been set.
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
 func (o *ApiV1RepeatModeGet200Response) GetModeOk() (*string, bool) {
 	if o == nil {
 		return nil, false
 	}
-	return &o.Mode, true
+	return o.Mode.Get(), o.Mode.IsSet()
 }
 
 // SetMode sets field value
 func (o *ApiV1RepeatModeGet200Response) SetMode(v string) {
-	o.Mode = v
+	o.Mode.Set(&v)
 }
 
 func (o ApiV1RepeatModeGet200Response) MarshalJSON() ([]byte, error) {
@@ -78,7 +80,7 @@ func (o ApiV1RepeatModeGet200Response) MarshalJSON() ([]byte, error) {
 
 func (o ApiV1RepeatModeGet200Response) ToMap() (map[string]interface{}, error) {
 	toSerialize := map[string]interface{}{}
-	toSerialize["mode"] = o.Mode
+	toSerialize["mode"] = o.Mode.Get()
 	return toSerialize, nil
 }
 

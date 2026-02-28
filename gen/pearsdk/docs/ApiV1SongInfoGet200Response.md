@@ -8,12 +8,12 @@ Name | Type | Description | Notes
 **Artist** | **string** |  | 
 **Views** | **float32** |  | 
 **UploadDate** | Pointer to **string** |  | [optional] 
-**ImageSrc** | Pointer to **string** |  | [optional] 
+**ImageSrc** | Pointer to **NullableString** |  | [optional] 
 **IsPaused** | Pointer to **bool** |  | [optional] 
 **SongDuration** | **float32** |  | 
 **ElapsedSeconds** | Pointer to **float32** |  | [optional] 
 **Url** | Pointer to **string** |  | [optional] 
-**Album** | Pointer to **string** |  | [optional] 
+**Album** | Pointer to **NullableString** |  | [optional] 
 **VideoId** | **string** |  | 
 **PlaylistId** | Pointer to **string** |  | [optional] 
 **MediaType** | **string** |  | 
@@ -147,6 +147,16 @@ SetImageSrc sets ImageSrc field to given value.
 
 HasImageSrc returns a boolean if a field has been set.
 
+### SetImageSrcNil
+
+`func (o *ApiV1SongInfoGet200Response) SetImageSrcNil(b bool)`
+
+ SetImageSrcNil sets the value for ImageSrc to be an explicit nil
+
+### UnsetImageSrc
+`func (o *ApiV1SongInfoGet200Response) UnsetImageSrc()`
+
+UnsetImageSrc ensures that no value is present for ImageSrc, not even an explicit nil
 ### GetIsPaused
 
 `func (o *ApiV1SongInfoGet200Response) GetIsPaused() bool`
@@ -267,6 +277,16 @@ SetAlbum sets Album field to given value.
 
 HasAlbum returns a boolean if a field has been set.
 
+### SetAlbumNil
+
+`func (o *ApiV1SongInfoGet200Response) SetAlbumNil(b bool)`
+
+ SetAlbumNil sets the value for Album to be an explicit nil
+
+### UnsetAlbum
+`func (o *ApiV1SongInfoGet200Response) UnsetAlbum()`
+
+UnsetAlbum ensures that no value is present for Album, not even an explicit nil
 ### GetVideoId
 
 `func (o *ApiV1SongInfoGet200Response) GetVideoId() string`
