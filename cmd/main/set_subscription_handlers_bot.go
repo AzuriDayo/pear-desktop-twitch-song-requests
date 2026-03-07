@@ -51,13 +51,12 @@ func (a *App) SetSubscriptionHandlersBot() {
 					BroadcasterID: realBroadcasterID,
 				})
 				if err != nil {
-					emsg := "Internal error when checking if you are a sub"
+					emsg := "Internal error when checking if " + event.ChatterUserLogin + " is a sub"
 					log.Println(emsg, err)
 					a.helixBot.SendChatMessage(&helix.SendChatMessageParams{
-						BroadcasterID:        event.BroadcasterUserId,
-						SenderID:             properUserID,
-						Message:              emsg,
-						ReplyParentMessageID: event.MessageId,
+						BroadcasterID: event.BroadcasterUserId,
+						SenderID:      properUserID,
+						Message:       emsg,
 					})
 					return
 				}
@@ -70,13 +69,12 @@ func (a *App) SetSubscriptionHandlersBot() {
 					BroadcasterID: realBroadcasterID,
 				})
 				if err != nil {
-					emsg := "Internal error when checking if you are a moderator"
+					emsg := "Internal error when checking if " + event.ChatterUserLogin + " is a moderator"
 					log.Println(emsg, err)
 					a.helixBot.SendChatMessage(&helix.SendChatMessageParams{
-						BroadcasterID:        event.BroadcasterUserId,
-						SenderID:             properUserID,
-						Message:              emsg,
-						ReplyParentMessageID: event.MessageId,
+						BroadcasterID: event.BroadcasterUserId,
+						SenderID:      properUserID,
+						Message:       emsg,
 					})
 					return
 				}
