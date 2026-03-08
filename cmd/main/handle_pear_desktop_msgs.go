@@ -46,7 +46,6 @@ func (a *App) handlePearDesktopMsgs() {
 				songQueueMutex.Unlock()
 			case "VIDEO_CHANGED":
 				songQueueMutex.Lock()
-				defer songQueueMutex.Unlock()
 				newVideoId := string(v.GetStringBytes("song", "videoId"))
 				playerInfo.Position = v.GetInt("position")
 				if playerInfo.Song.VideoId != newVideoId {
@@ -93,20 +92,23 @@ func (a *App) handlePearDesktopMsgs() {
 							if err != nil || preResponse.StatusCode != http.StatusOK {
 								emsg := "Internal error when checking if song is already in queue"
 								log.Println(emsg, err)
-								return
+								songQueueMutex.Unlock() // safe unlock
+								break
 							}
 							qb, err := io.ReadAll(preResponse.Body)
 							if err != nil {
 								emsg := "Internal error processing data to check if song is already in queue"
 								log.Println(emsg, err)
-								return
+								songQueueMutex.Unlock() // safe unlock
+								break
 							}
 							err = json.Unmarshal(qb, &queue)
 							preResponse.Body.Close()
 							if err != nil {
 								emsg := "Failed to check if song exists in queue."
 								log.Println(emsg, err)
-								return
+								songQueueMutex.Unlock() // safe unlock
+								break
 							}
 
 							afterSelected := false
@@ -153,7 +155,7 @@ func (a *App) handlePearDesktopMsgs() {
 						}
 					}
 				}
-
+				songQueueMutex.Unlock()
 			case "PLAYER_STATE_CHANGED":
 				songQueueMutex.Lock()
 				playerInfo.Position = v.GetInt("position")
