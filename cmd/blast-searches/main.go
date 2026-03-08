@@ -8,11 +8,10 @@ import (
 
 func main() {
 	songs := []string{
-		// "!sr yena nemonemo",
-		// "!sr yena good morning",
-		// "!sr yena being a good girl hurts",
-		// "!sr yena smartphone",
-		"!sr BKNYZpVo0Vo",
+		"!sr yena nemonemo",
+		"!sr yena good morning",
+		"!sr yena being a good girl hurts",
+		"!sr yena smartphone",
 	}
 	for _, v := range songs {
 		v = songrequests.ParseSearchQuery(v)
