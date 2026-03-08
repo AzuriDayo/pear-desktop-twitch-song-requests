@@ -174,7 +174,7 @@ func (a *App) SetSubscriptionHandlers() {
 
 			resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/song")
 			if err != nil {
-				a.helixBot.SendChatMessage(&helix.SendChatMessageParams{
+				useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
 					BroadcasterID:        event.BroadcasterUserId,
 					SenderID:             properUserID,
 					Message:              "Failed to get details for currently playing song.",
@@ -184,7 +184,7 @@ func (a *App) SetSubscriptionHandlers() {
 			}
 			bb, err := io.ReadAll(resp.Body)
 			if err != nil {
-				a.helixBot.SendChatMessage(&helix.SendChatMessageParams{
+				useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
 					BroadcasterID:        event.BroadcasterUserId,
 					SenderID:             properUserID,
 					Message:              "Failed to read details for currently playing song.",
@@ -194,7 +194,7 @@ func (a *App) SetSubscriptionHandlers() {
 			}
 			err = json.Unmarshal(bb, &song)
 			if err != nil {
-				a.helixBot.SendChatMessage(&helix.SendChatMessageParams{
+				useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
 					BroadcasterID:        event.BroadcasterUserId,
 					SenderID:             properUserID,
 					Message:              "Failed to check data for currently playing song.",
@@ -214,7 +214,7 @@ func (a *App) SetSubscriptionHandlers() {
 				s += sl
 			}
 			s = strings.TrimSuffix(s, ", ")
-			a.helixBot.SendChatMessage(&helix.SendChatMessageParams{
+			useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
 				BroadcasterID:        event.BroadcasterUserId,
 				SenderID:             properUserID,
 				Message:              s,
