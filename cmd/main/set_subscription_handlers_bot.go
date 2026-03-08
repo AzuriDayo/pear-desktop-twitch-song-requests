@@ -27,6 +27,7 @@ func (a *App) SetSubscriptionHandlersBot() {
 		isSub := false
 		isBroadcaster := false
 		isModerator := false
+		isVip := false
 		isSelf := false
 		useProperHelix := a.helixBot
 		properUserID := a.twitchDataStructBot.userID
@@ -67,6 +68,24 @@ func (a *App) SetSubscriptionHandlersBot() {
 					isSub = true
 				}
 
+				vipsResponse, err := a.helix.GetChannelVips(&helix.GetChannelVipsParams{
+					UserID:        event.ChatterUserId,
+					BroadcasterID: realBroadcasterID,
+				})
+				if err != nil {
+					emsg := "Internal error when checking if " + event.ChatterUserLogin + " is a vip"
+					log.Println(emsg, err)
+					a.helixBot.SendChatMessage(&helix.SendChatMessageParams{
+						BroadcasterID: event.BroadcasterUserId,
+						SenderID:      properUserID,
+						Message:       emsg,
+					})
+					return
+				}
+				if len(vipsResponse.Data.ChannelsVips) > 0 {
+					isVip = true
+				}
+
 				modsResponse, err := a.helix.GetModerators(&helix.GetModeratorsParams{
 					UserIDs:       []string{event.ChatterUserId},
 					BroadcasterID: realBroadcasterID,
@@ -104,7 +123,7 @@ func (a *App) SetSubscriptionHandlersBot() {
 			return
 		}
 
-		if isSub && len(trimmedText) > 4 && strings.ToLower(trimmedText[:4]) == "!sr " {
+		if (isSub || isVip) && len(trimmedText) > 4 && strings.EqualFold(trimmedText[:4], "!sr ") {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
@@ -112,7 +131,7 @@ func (a *App) SetSubscriptionHandlersBot() {
 			return
 		}
 
-		if strings.ToLower(trimmedText) == "!skip" && isModerator {
+		if strings.EqualFold(trimmedText, "!skip") && isModerator {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
@@ -142,7 +161,7 @@ func (a *App) SetSubscriptionHandlersBot() {
 			return
 		}
 
-		if strings.ToLower(trimmedText) == "!song" {
+		if strings.EqualFold(trimmedText, "!song") {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
@@ -193,7 +212,7 @@ func (a *App) SetSubscriptionHandlersBot() {
 			return
 		}
 
-		if strings.ToLower(trimmedText) == "!queue" {
+		if strings.EqualFold(trimmedText, "!queue") {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
@@ -256,6 +275,19 @@ func (a *App) SetSubscriptionHandlersBot() {
 				BroadcasterID:        event.BroadcasterUserId,
 				SenderID:             properUserID,
 				Message:              s,
+				ReplyParentMessageID: event.MessageId,
+			})
+			return
+		}
+
+		if (isModerator || isBroadcaster) && strings.EqualFold(trimmedText, "!version") {
+			if !a.streamOnline && !isBroadcaster {
+				return
+			}
+			useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
+				BroadcasterID:        event.BroadcasterUserId,
+				SenderID:             properUserID,
+				Message:              version,
 				ReplyParentMessageID: event.MessageId,
 			})
 			return

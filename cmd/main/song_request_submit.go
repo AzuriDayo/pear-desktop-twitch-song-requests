@@ -28,84 +28,56 @@ func (a *App) songRequestSubmit(useProperHelix *helix.Client, properUserID strin
 	}
 
 	// Loop through queue state to check if song is queued already
-	queue := songrequests.QueueResponse{}
+	nowPlayingSong := songrequests.SongResult{}
 
-	preResponse, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/queue")
-	if err != nil || preResponse.StatusCode != http.StatusOK {
-		emsg := "Internal error when checking if song is already in queue"
-		log.Println(emsg, err)
+	resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/song")
+	if err != nil {
 		useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
 			BroadcasterID:        event.BroadcasterUserId,
 			SenderID:             properUserID,
-			Message:              emsg,
+			Message:              "Failed to get details for currently playing song.",
 			ReplyParentMessageID: event.MessageId,
 		})
 		return
 	}
-	qb, err := io.ReadAll(preResponse.Body)
+	bb, err := io.ReadAll(resp.Body)
 	if err != nil {
-		emsg := "Internal error processing data to check if song is already in queue"
-		log.Println(emsg, err)
 		useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
 			BroadcasterID:        event.BroadcasterUserId,
 			SenderID:             properUserID,
-			Message:              emsg,
+			Message:              "Failed to read details for currently playing song.",
 			ReplyParentMessageID: event.MessageId,
 		})
 		return
 	}
-	err = json.Unmarshal(qb, &queue)
-	preResponse.Body.Close()
+	err = json.Unmarshal(bb, &nowPlayingSong)
 	if err != nil {
-		emsg := "Failed to check if song exists in queue."
-		log.Println(emsg, err)
 		useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
 			BroadcasterID:        event.BroadcasterUserId,
 			SenderID:             properUserID,
-			Message:              emsg,
+			Message:              "Failed to check data for currently playing song.",
 			ReplyParentMessageID: event.MessageId,
 		})
 		return
 	}
 
-	afterSelected := false
+	// nowPlayingSong now is correct
 	songExistsInQueue := false
-	for _, v := range queue.Items {
-		selected := false
-		compareVideoIDs := map[string]struct{}{}
-		if v.PlaylistPanelVideoWrapperRenderer != nil {
-			compareVideoIDs[v.PlaylistPanelVideoWrapperRenderer.PrimaryRenderer.PlaylistPanelVideoRenderer.VideoId] = struct{}{}
-			if v.PlaylistPanelVideoWrapperRenderer.PrimaryRenderer.PlaylistPanelVideoRenderer.Selected {
-				selected = true
-			}
-			for _, v2 := range v.PlaylistPanelVideoWrapperRenderer.Counterpart {
-				compareVideoIDs[v2.CounterpartRenderer.PlaylistPanelVideoRenderer.VideoId] = struct{}{}
-			}
-		}
-		if v.PlaylistPanelVideoRenderer != nil {
-			compareVideoIDs[v.PlaylistPanelVideoRenderer.VideoId] = struct{}{}
-			if v.PlaylistPanelVideoRenderer.Selected {
-				selected = true
-			}
-		}
-		if selected {
-			afterSelected = true
-		}
-		if _, ok := compareVideoIDs[song.VideoID]; afterSelected && ok {
-			songExistsInQueue = true
-			break
-		}
+	if nowPlayingSong.VideoID == song.VideoID {
+		songExistsInQueue = true
 	}
 
 	// done check raw client queue, now check internal queue
-	songQueueMutex.Lock()
-	for _, v := range songQueue {
-		if song.VideoID == v.Song.VideoID {
-			songExistsInQueue = true
-			break
+	if !songExistsInQueue {
+		songQueueMutex.Lock()
+		for _, v := range songQueue {
+			if song.VideoID == v.Song.VideoID {
+				songExistsInQueue = true
+				break
+			}
 		}
+		songQueueMutex.Unlock()
 	}
-	songQueueMutex.Unlock()
 
 	if songExistsInQueue {
 		msg := "Song is already in queue!"

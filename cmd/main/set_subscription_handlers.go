@@ -38,6 +38,7 @@ func (a *App) SetSubscriptionHandlers() {
 		isSub := false
 		isBroadcaster := false
 		isModerator := false
+		isVip := false
 		trimmedText := strings.TrimSpace(event.Message.Text)
 		trimmedText = strings.Trim(event.Message.Text, " ͏") // idk why twitch adds this character
 
@@ -54,6 +55,10 @@ func (a *App) SetSubscriptionHandlers() {
 				isModerator = true
 				isSub = true
 			}
+			if v.SetId == "vip" {
+				isSub = true
+				isVip = true
+			}
 		}
 		var useProperHelix *helix.Client
 		properUserID := ""
@@ -66,7 +71,7 @@ func (a *App) SetSubscriptionHandlers() {
 		}
 
 		log.Printf("Chat message from %s: %s %s\n", event.ChatterUserLogin, trimmedText, event.ChannelPointsCustomRewardId)
-		if (a.songRequestRewardID == event.ChannelPointsCustomRewardId && event.ChannelPointsCustomRewardId != "") || (isSub && len(trimmedText) > 4 && strings.ToLower(trimmedText[:4]) == "!sr ") {
+		if (a.songRequestRewardID == event.ChannelPointsCustomRewardId && event.ChannelPointsCustomRewardId != "") || ((isSub || isVip) && len(trimmedText) > 4 && strings.ToLower(trimmedText[:4]) == "!sr ") {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
@@ -74,7 +79,7 @@ func (a *App) SetSubscriptionHandlers() {
 			return
 		}
 
-		if strings.ToLower(trimmedText) == "!skip" && isModerator {
+		if strings.EqualFold(trimmedText, "!skip") && isModerator {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
@@ -104,7 +109,7 @@ func (a *App) SetSubscriptionHandlers() {
 			return
 		}
 
-		if strings.ToLower(trimmedText) == "!song" {
+		if strings.EqualFold(trimmedText, "!song") {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
@@ -155,7 +160,7 @@ func (a *App) SetSubscriptionHandlers() {
 			return
 		}
 
-		if strings.ToLower(trimmedText) == "!queue" {
+		if strings.EqualFold(trimmedText, "!queue") {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
