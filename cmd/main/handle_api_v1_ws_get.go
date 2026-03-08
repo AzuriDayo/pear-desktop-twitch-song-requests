@@ -9,7 +9,7 @@ import (
 	"golang.org/x/net/websocket"
 )
 
-func (a *App) handleAppWs(c echo.Context) error {
+func (a *App) wsGET(c echo.Context) error {
 	websocket.Handler(func(ws *websocket.Conn) {
 		// Add client to the map
 		a.clientsMu.Lock()
