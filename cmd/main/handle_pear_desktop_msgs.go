@@ -84,7 +84,7 @@ func (a *App) handlePearDesktopMsgs() {
 						}
 					} else {
 						log.Println("Failed to play next song in queue: " + queueHead.Song.Title + " - " + queueHead.Song.Artist)
-						log.Println("Make sure it plays next in pear desktop!")
+						log.Println("Make sure it plays next in pear desktop to resume song requests!")
 					}
 				}
 				songQueueMutex.Unlock()
