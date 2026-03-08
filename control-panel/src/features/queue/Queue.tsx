@@ -17,11 +17,26 @@ export default () => {
 		<div>
 			<div>
 				<h4>Currently playing:</h4>
-				<a target='_blank' href={`${playerState.videoUrl}`} style={{ display: 'flex', flexDirection: 'row', alignItems: 'center',  justifyContent: 'center' }}>
-					<img style={{ maxHeight: '5vw', marginRight: '20px', borderRadius: "3px" }} src={`${playerState.albumArtUrl}`}></img>
+				<a
+					target="_blank"
+					href={`${playerState.videoUrl}`}
+					style={{
+						display: "flex",
+						flexDirection: "row",
+						alignItems: "center",
+						justifyContent: "center",
+					}}
+				>
+					<img
+						style={{
+							maxHeight: "5vw",
+							marginRight: "20px",
+							borderRadius: "3px",
+						}}
+						src={`${playerState.albumArtUrl}`}
+					></img>
 					<span>{`${playerState.artistName} - ${playerState.songName}`}</span>
 				</a>
-
 			</div>
 			<br />
 			<br />
