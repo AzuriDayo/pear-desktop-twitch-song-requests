@@ -5,8 +5,10 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	. "github.com/azuridayo/pear-desktop-twitch-song-requests/gen/table"
+	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/data"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/databaseconn"
 	"github.com/go-jet/jet/v2/sqlite"
 	. "github.com/go-jet/jet/v2/sqlite"
@@ -75,6 +77,13 @@ func (a *App) handleApiV1RequestersHistoryGET(c echo.Context) error {
 	if err != nil {
 		log.Println("handleRequestersHistory: failed to query data", err)
 		return c.NoContent(http.StatusInternalServerError)
+	}
+
+	// convert dates to json friendly...
+	// Not that bad because there can only be a limited amount of results in a GET request
+	for i := range results {
+		t, _ := time.Parse(data.TWITCH_SERVER_DATE_LAYOUT, results[i].RequestedAt)
+		results[i].RequestedAt = t.UTC().Format(time.RFC3339)
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{
