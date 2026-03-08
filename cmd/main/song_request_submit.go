@@ -16,6 +16,14 @@ func (a *App) songRequestSubmit(useProperHelix *helix.Client, properUserID strin
 	s := songrequests.ParseSearchQuery(event.Message.Text)
 	song, err := songrequests.SearchSong(strings.TrimPrefix(s, "-"), 60, 600)
 	if err != nil {
+		log.Println("Searching for song failed: "+event.Message.Text+"\n", err)
+		emsg := "Failed to search for your song"
+		useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
+			BroadcasterID:        event.BroadcasterUserId,
+			SenderID:             properUserID,
+			Message:              emsg,
+			ReplyParentMessageID: event.MessageId,
+		})
 		return
 	}
 
@@ -89,6 +97,16 @@ func (a *App) songRequestSubmit(useProperHelix *helix.Client, properUserID strin
 		}
 	}
 
+	// done check raw client queue, now check internal queue
+	songQueueMutex.Lock()
+	for _, v := range songQueue {
+		if song.VideoID == v.Song.VideoID {
+			songExistsInQueue = true
+			break
+		}
+	}
+	songQueueMutex.Unlock()
+
 	if songExistsInQueue {
 		msg := "Song is already in queue!"
 		useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
@@ -101,10 +119,5 @@ func (a *App) songRequestSubmit(useProperHelix *helix.Client, properUserID strin
 	}
 
 	// Committing to adding song to q
-	useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
-		BroadcasterID:        event.BroadcasterUserId,
-		SenderID:             properUserID,
-		Message:              "Added song: " + song.Title + " - " + song.Artist + " " + "https://youtu.be/" + song.VideoID,
-		ReplyParentMessageID: event.MessageId,
-	})
+	a.songRequestLogic(song, event, properUserID, useProperHelix)
 }

@@ -27,13 +27,16 @@ func (a *App) SetSubscriptionHandlersBot() {
 		isSub := false
 		isBroadcaster := false
 		isModerator := false
+		isSelf := false
 		useProperHelix := a.helixBot
 		properUserID := a.twitchDataStructBot.userID
 		realBroadcasterID := a.twitchDataStruct.userID
 		trimmedText := strings.TrimSpace(event.Message.Text)
 		trimmedText = strings.Trim(trimmedText, " ͏") // idk why twitch adds this character
 
-		if strings.EqualFold(event.ChatterUserLogin, a.twitchDataStruct.login) {
+		if strings.EqualFold(event.ChatterUserLogin, a.twitchDataStructBot.login) {
+			isSelf = true
+		} else if strings.EqualFold(event.ChatterUserLogin, a.twitchDataStruct.login) {
 			isSub = true
 			isBroadcaster = true
 			isModerator = true
@@ -96,12 +99,17 @@ func (a *App) SetSubscriptionHandlersBot() {
 				checkMainChannelUserStatusMutex.Unlock()
 			}
 		}
+		if isSelf {
+			// do not process bot self msgs.
+			return
+		}
 
 		if isSub && len(trimmedText) > 4 && strings.ToLower(trimmedText[:4]) == "!sr " {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
 			a.songRequestSubmit(useProperHelix, properUserID, event)
+			return
 		}
 
 		if strings.ToLower(trimmedText) == "!skip" && isModerator {
@@ -189,9 +197,6 @@ func (a *App) SetSubscriptionHandlersBot() {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
-			failed := false
-			queue := songrequests.QueueResponse{}
-			var rootErr error = nil
 			queueCmdMutexBot.Lock()
 			if !time.Now().After(lastUsedQueueCmdBot.Add(time.Second * 10)) {
 				queueCmdMutexBot.Unlock()
@@ -200,66 +205,59 @@ func (a *App) SetSubscriptionHandlersBot() {
 			lastUsedQueueCmdBot = time.Now()
 			queueCmdMutexBot.Unlock()
 
-			resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/queue")
-			if err == nil {
-				bb, err := io.ReadAll(resp.Body)
-				if err == nil {
-					rootErr = json.Unmarshal(bb, &queue)
-					if rootErr != nil {
-						failed = true
-					}
-				} else {
-					failed = true
-					rootErr = err
-				}
-			} else {
-				failed = true
-				rootErr = err
-			}
+			songQueueMutex.RLock()
+			defer songQueueMutex.RUnlock()
 
-			if failed {
-				log.Println("Failed to get queue info from !queue", rootErr)
+			song := songrequests.SongResult{}
+
+			resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/song")
+			if err != nil {
 				a.helixBot.SendChatMessage(&helix.SendChatMessageParams{
 					BroadcasterID:        event.BroadcasterUserId,
 					SenderID:             properUserID,
-					Message:              "Internal failure to get queue detail!",
+					Message:              "Failed to get details for currently playing song.",
 					ReplyParentMessageID: event.MessageId,
 				})
-			} else {
-				s := "Now: "
-				n := 0
-				foundSelected := false
-				for _, v := range queue.Items {
-					if v.PlaylistPanelVideoWrapperRenderer != nil {
-						v.PlaylistPanelVideoRenderer = &v.PlaylistPanelVideoWrapperRenderer.PrimaryRenderer.PlaylistPanelVideoRenderer
-					}
-					if v.PlaylistPanelVideoRenderer.Selected {
-						foundSelected = true
-					}
-					if !v.PlaylistPanelVideoRenderer.Selected && !foundSelected {
-						continue
-					}
-					if n > 5 {
-						break
-					}
-					n++
-					title := v.PlaylistPanelVideoRenderer.Title.Runs[0].Text
-					artist := v.PlaylistPanelVideoRenderer.ShortBylineText.Runs[0].Text
-					sl := "#" + strconv.Itoa(n-1) + ": " + title + " - " + artist + ", "
-					if n == 1 {
-						sl = strings.TrimPrefix(sl, "#"+strconv.Itoa(n-1)+": ")
-					}
-					s += sl
-				}
-				s = strings.TrimSuffix(s, ", ")
-
+				return
+			}
+			bb, err := io.ReadAll(resp.Body)
+			if err != nil {
 				a.helixBot.SendChatMessage(&helix.SendChatMessageParams{
 					BroadcasterID:        event.BroadcasterUserId,
 					SenderID:             properUserID,
-					Message:              s,
+					Message:              "Failed to read details for currently playing song.",
 					ReplyParentMessageID: event.MessageId,
 				})
+				return
 			}
+			err = json.Unmarshal(bb, &song)
+			if err != nil {
+				a.helixBot.SendChatMessage(&helix.SendChatMessageParams{
+					BroadcasterID:        event.BroadcasterUserId,
+					SenderID:             properUserID,
+					Message:              "Failed to check data for currently playing song.",
+					ReplyParentMessageID: event.MessageId,
+				})
+				return
+			}
+
+			// song now is correct
+
+			// append queue
+			s := "Now: " + song.Title + " - " + song.Artist + ", "
+			for i, v := range songQueue {
+				title := v.Song.Title
+				artist := v.Song.Artist
+				sl := "#" + strconv.Itoa(i+1) + ": " + title + " - " + artist + ", "
+				s += sl
+			}
+			s = strings.TrimSuffix(s, ", ")
+			a.helixBot.SendChatMessage(&helix.SendChatMessageParams{
+				BroadcasterID:        event.BroadcasterUserId,
+				SenderID:             properUserID,
+				Message:              s,
+				ReplyParentMessageID: event.MessageId,
+			})
 			return
 		}
 	})

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 	"log"
@@ -45,6 +46,7 @@ func (a *App) handlePearDesktopMsgs() {
 				songQueueMutex.Unlock()
 			case "VIDEO_CHANGED":
 				songQueueMutex.Lock()
+				defer songQueueMutex.Unlock()
 				newVideoId := string(v.GetStringBytes("song", "videoId"))
 				playerInfo.Position = v.GetInt("position")
 				if playerInfo.Song.VideoId != newVideoId {
@@ -56,112 +58,10 @@ func (a *App) handlePearDesktopMsgs() {
 						VideoId:          newVideoId,
 					}
 					playerInfo.Song = songinfo
-					if len(songQueue) > 1 && songQueue[0].Song.VideoID != newVideoId {
-						// queue invalid now, wiping queue
-						log.Println("App internal queue order and ytm queue order mismatched, attempting to recover queue...")
-						recoverVideoId := songQueue[len(songQueue)-1].Song.VideoID
-						queue := songrequests.QueueResponse{
-							Items: []struct {
-								PlaylistPanelVideoRenderer        *songrequests.QueueResponsePlaylistPanelVideoRenderer `json:"playlistPanelVideoRenderer"`
-								PlaylistPanelVideoWrapperRenderer *struct {
-									PrimaryRenderer struct {
-										PlaylistPanelVideoRenderer songrequests.QueueResponsePlaylistPanelVideoRenderer `json:"playlistPanelVideoRenderer"`
-									} `json:"primaryRenderer"`
-									Counterpart []struct {
-										CounterpartRenderer struct {
-											PlaylistPanelVideoRenderer songrequests.QueueResponsePlaylistPanelVideoRenderer `json:"playlistPanelVideoRenderer"`
-										} `json:"counterpartRenderer"`
-									} `json:"counterpart"`
-								} `json:"playlistPanelVideoWrapperRenderer"`
-							}{},
-						}
-						failed := false
-						resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/queue")
-						if err != nil || resp.StatusCode != http.StatusOK {
-							// failed recovery
-							failed = true
-						}
-						if !failed {
-							qb, err := io.ReadAll(resp.Body)
-							if err != nil {
-								failed = true
-							}
-							if !failed {
-								resp.Body.Close()
-								err = json.Unmarshal(qb, &queue)
-								if err != nil {
-									failed = true
-								}
-							}
-						}
 
-						// TODO: need to change this loop to start from the back, since songs might have been re-requested
-						fromId := -1
-						toId := -1
-						for i := len(queue.Items) - 1; i >= 0; i-- {
-							selected := false
-							compareVideoIDs := map[string]struct{}{}
-							if queue.Items[i].PlaylistPanelVideoWrapperRenderer != nil {
-								compareVideoIDs[queue.Items[i].PlaylistPanelVideoWrapperRenderer.PrimaryRenderer.PlaylistPanelVideoRenderer.VideoId] = struct{}{}
-								if queue.Items[i].PlaylistPanelVideoWrapperRenderer.PrimaryRenderer.PlaylistPanelVideoRenderer.Selected {
-									selected = true
-								}
-								for _, v2 := range queue.Items[i].PlaylistPanelVideoWrapperRenderer.Counterpart {
-									compareVideoIDs[v2.CounterpartRenderer.PlaylistPanelVideoRenderer.VideoId] = struct{}{}
-								}
-							}
-							if queue.Items[i].PlaylistPanelVideoRenderer != nil {
-								compareVideoIDs[queue.Items[i].PlaylistPanelVideoRenderer.VideoId] = struct{}{}
-								if queue.Items[i].PlaylistPanelVideoRenderer.Selected {
-									selected = true
-								}
-							}
-							if selected {
-								fromId = i
-							}
-							if _, ok := compareVideoIDs[recoverVideoId]; ok {
-								toId = i
-							}
-							if fromId != -1 && toId != -1 {
-								break
-							}
-						}
-						if fromId == -1 || toId == -1 {
-							failed = true
-						}
-						if !failed {
-							songQueue = []SongQueueItem{}
-							for i := fromId; i <= toId; i++ {
-								if queue.Items[i].PlaylistPanelVideoRenderer.VideoId != newVideoId {
-									songQueue = append(songQueue, SongQueueItem{
-										RequestedBy: "recovered",
-										IsNinja:     false,
-										Song: songrequests.SongResult{
-											Title:   queue.Items[i].PlaylistPanelVideoRenderer.Title.Runs[0].Text,
-											Artist:  queue.Items[i].PlaylistPanelVideoRenderer.ShortBylineText.Runs[0].Text,
-											VideoID: queue.Items[i].PlaylistPanelVideoRenderer.VideoId,
-										},
-									})
-								}
-							}
-							// recover success
-							log.Println("Recovery successful, internal queue maintained")
-
-							queueInfoOnRecovery, _ := json.Marshal(echo.Map{
-								"type":       "QUEUE_INFO",
-								"song_queue": songQueue,
-							})
-							a.clientsMu.Lock()
-							for ws := range a.clients {
-								websocket.Message.Send(ws, string(queueInfoOnRecovery))
-							}
-							a.clientsMu.Unlock()
-
-						} else {
-							log.Println("Recovery unsuccessful, internal queue is wiped, but your queue in ytm is intact")
-						}
-					} else {
-						if len(songQueue) > 0 {
+					if len(songQueue) > 0 {
+						queueHead := songQueue[0]
+						if queueHead.Song.VideoID == newVideoId {
 							songQueue = songQueue[1:]
 							queueInfoOnShift, _ := json.Marshal(echo.Map{
 								"type": "QUEUE_SHIFT",
@@ -171,10 +71,89 @@ func (a *App) handlePearDesktopMsgs() {
 								websocket.Message.Send(ws, string(queueInfoOnShift))
 							}
 							a.clientsMu.Unlock()
+
+							if len(songQueue) > 0 {
+								b := echo.Map{
+									"videoId":        songQueue[0].Song.VideoID,
+									"insertPosition": "INSERT_AFTER_CURRENT_VIDEO",
+								}
+								bb, _ := json.Marshal(b)
+								resp, err := http.Post("http://"+songrequests.GetPearDesktopHost()+"/api/v1/queue", "application/json", bytes.NewBuffer(bb))
+								if err != nil || resp.StatusCode != http.StatusNoContent {
+									emsg := "Internal error when adding song to pear desktop"
+									log.Println(emsg, err)
+								}
+							}
+						} else {
+							// find song in pear desktop, if it exists, ignore, otherwise queue it next
+							// Loop through queue state to check if song is queued already
+							queue := songrequests.QueueResponse{}
+
+							preResponse, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/queue")
+							if err != nil || preResponse.StatusCode != http.StatusOK {
+								emsg := "Internal error when checking if song is already in queue"
+								log.Println(emsg, err)
+								return
+							}
+							qb, err := io.ReadAll(preResponse.Body)
+							if err != nil {
+								emsg := "Internal error processing data to check if song is already in queue"
+								log.Println(emsg, err)
+								return
+							}
+							err = json.Unmarshal(qb, &queue)
+							preResponse.Body.Close()
+							if err != nil {
+								emsg := "Failed to check if song exists in queue."
+								log.Println(emsg, err)
+								return
+							}
+
+							afterSelected := false
+							songExistsInQueue := false
+							for _, v := range queue.Items {
+								selected := false
+								compareVideoIDs := map[string]struct{}{}
+								if v.PlaylistPanelVideoWrapperRenderer != nil {
+									compareVideoIDs[v.PlaylistPanelVideoWrapperRenderer.PrimaryRenderer.PlaylistPanelVideoRenderer.VideoId] = struct{}{}
+									if v.PlaylistPanelVideoWrapperRenderer.PrimaryRenderer.PlaylistPanelVideoRenderer.Selected {
+										selected = true
+									}
+									for _, v2 := range v.PlaylistPanelVideoWrapperRenderer.Counterpart {
+										compareVideoIDs[v2.CounterpartRenderer.PlaylistPanelVideoRenderer.VideoId] = struct{}{}
+									}
+								}
+								if v.PlaylistPanelVideoRenderer != nil {
+									compareVideoIDs[v.PlaylistPanelVideoRenderer.VideoId] = struct{}{}
+									if v.PlaylistPanelVideoRenderer.Selected {
+										selected = true
+									}
+								}
+								if selected {
+									afterSelected = true
+								}
+								if _, ok := compareVideoIDs[queueHead.Song.VideoID]; afterSelected && ok {
+									songExistsInQueue = true
+									break
+								}
+							}
+							if !songExistsInQueue {
+								b := echo.Map{
+									"videoId":        queueHead.Song.VideoID,
+									"insertPosition": "INSERT_AFTER_CURRENT_VIDEO",
+								}
+								bb, _ := json.Marshal(b)
+								resp, err := http.Post("http://"+songrequests.GetPearDesktopHost()+"/api/v1/queue", "application/json", bytes.NewBuffer(bb))
+								if err != nil || resp.StatusCode != http.StatusNoContent {
+									emsg := "Internal error when adding song to pear desktop"
+									log.Println(emsg, err)
+								}
+							}
+							// else do nothing just wait for the song to play next.
 						}
 					}
 				}
-				songQueueMutex.Unlock()
+
 			case "PLAYER_STATE_CHANGED":
 				songQueueMutex.Lock()
 				playerInfo.Position = v.GetInt("position")
