@@ -51,11 +51,6 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, event twitch.Event
 			})
 			return
 		}
-		if strings.EqualFold(event.BroadcasterUserLogin, a.twitchDataStructBot.login) {
-			log.Println("hehe chatter " + event.ChatterUserLogin + ": Queued song " + song.Title + " - " + song.Artist)
-		} else {
-			log.Println(event.ChatterUserLogin + ": Queued song " + song.Title + " - " + song.Artist)
-		}
 	}
 
 	// Broadcast song added to queue to browser control panel
@@ -103,6 +98,11 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, event twitch.Event
 		}
 	}()
 
+	if strings.EqualFold(event.BroadcasterUserLogin, a.twitchDataStructBot.login) {
+		log.Println("hehe chatter " + event.ChatterUserLogin + ": Queued song " + song.Title + " - " + song.Artist)
+	} else {
+		log.Println(event.ChatterUserLogin + ": Queued song " + song.Title + " - " + song.Artist)
+	}
 	useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
 		BroadcasterID:        event.BroadcasterUserId,
 		SenderID:             properUserID,
