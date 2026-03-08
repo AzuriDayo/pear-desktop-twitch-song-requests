@@ -214,13 +214,13 @@ func (a *App) Run() error {
 	}))
 
 	apiV1 := e.Group("/api/v1")
-	apiV1.POST("/twitch-oauth", a.twitchOAuthPOST)
-	apiV1.PATCH("/settings", a.settingsPATCH)
-	apiV1.GET("/ws", a.wsGET)
+	apiV1.POST("/twitch-oauth", a.handleApiV1TwitchOAuthPOST)
+	apiV1.PATCH("/settings", a.handleApiV1SettingsPATCH)
+	apiV1.GET("/ws", a.handleApiV1WsGET)
 	apiV1Requesters := apiV1.Group("/requesters")
-	apiV1Requesters.GET("/history", a.requestersHistoryGET)
+	apiV1Requesters.GET("/history", a.handleApiV1RequestersHistoryGET)
 	apiV1Twitch := apiV1.Group("/twitch")
-	apiV1Twitch.GET("/custom-rewards", a.twitchCustomRewardsGET)
+	apiV1Twitch.GET("/custom-rewards", a.handleApiV1TwitchCustomRewardsGET)
 
 	var cmd string
 	var args []string

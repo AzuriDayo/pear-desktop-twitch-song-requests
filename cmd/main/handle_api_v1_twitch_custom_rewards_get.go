@@ -15,7 +15,7 @@ type selectableReward struct {
 	Cost int    `json:"cost"`
 }
 
-func (a *App) twitchCustomRewardsGET(c echo.Context) error {
+func (a *App) handleApiV1TwitchCustomRewardsGET(c echo.Context) error {
 	if a.helix == nil {
 		return c.NoContent(http.StatusUnauthorized)
 	}
