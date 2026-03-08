@@ -18,7 +18,7 @@ type PaginationCommon struct {
 	Page    string `query:"page"`
 }
 
-func (a *App) handleRequestersHistory(c echo.Context) error {
+func (a *App) handleApiV1RequestersHistoryGET(c echo.Context) error {
 	var err error
 	p := PaginationCommon{}
 

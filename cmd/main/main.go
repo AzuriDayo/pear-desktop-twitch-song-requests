@@ -199,13 +199,6 @@ func (a *App) Run() error {
 		}
 	}()
 
-	// Process song requests
-	go func() {
-		for msg := range srChan {
-			a.songRequestLogic(msg.song, msg.event)
-		}
-	}()
-
 	// Echo instance
 	e := echo.New()
 	e.HideBanner = true
@@ -221,11 +214,13 @@ func (a *App) Run() error {
 	}))
 
 	apiV1 := e.Group("/api/v1")
-	apiV1.POST("/twitch-oauth", a.processTwitchOAuth)
-	apiV1.PATCH("/settings", a.processTwitchSettings)
-	apiV1.GET("/ws", a.handleAppWs)
+	apiV1.POST("/twitch-oauth", a.handleApiV1TwitchOAuthPOST)
+	apiV1.PATCH("/settings", a.handleApiV1SettingsPATCH)
+	apiV1.GET("/ws", a.handleApiV1WsGET)
 	apiV1Requesters := apiV1.Group("/requesters")
-	apiV1Requesters.GET("/history", a.handleRequestersHistory)
+	apiV1Requesters.GET("/history", a.handleApiV1RequestersHistoryGET)
+	apiV1Twitch := apiV1.Group("/twitch")
+	apiV1Twitch.GET("/custom-rewards", a.handleApiV1TwitchCustomRewardsGET)
 
 	var cmd string
 	var args []string

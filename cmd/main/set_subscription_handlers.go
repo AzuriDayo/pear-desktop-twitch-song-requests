@@ -159,9 +159,6 @@ func (a *App) SetSubscriptionHandlers() {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
-			failed := false
-			queue := songrequests.QueueResponse{}
-			var rootErr error = nil
 			queueCmdMutex.Lock()
 			if !time.Now().After(lastUsedQueueCmd.Add(time.Second * 10)) {
 				queueCmdMutex.Unlock()
@@ -170,66 +167,59 @@ func (a *App) SetSubscriptionHandlers() {
 			lastUsedQueueCmd = time.Now()
 			queueCmdMutex.Unlock()
 
-			resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/queue")
-			if err == nil {
-				bb, err := io.ReadAll(resp.Body)
-				if err == nil {
-					rootErr = json.Unmarshal(bb, &queue)
-					if rootErr != nil {
-						failed = true
-					}
-				} else {
-					failed = true
-					rootErr = err
-				}
-			} else {
-				failed = true
-				rootErr = err
-			}
+			songQueueMutex.RLock()
+			defer songQueueMutex.RUnlock()
 
-			if failed {
-				log.Println("Failed to get queue info from !queue", rootErr)
-				useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
+			song := songrequests.SongResult{}
+
+			resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/song")
+			if err != nil {
+				a.helixBot.SendChatMessage(&helix.SendChatMessageParams{
 					BroadcasterID:        event.BroadcasterUserId,
 					SenderID:             properUserID,
-					Message:              "Internal failure to get queue detail!",
+					Message:              "Failed to get details for currently playing song.",
 					ReplyParentMessageID: event.MessageId,
 				})
-			} else {
-				s := "Now: "
-				n := 0
-				foundSelected := false
-				for _, v := range queue.Items {
-					if v.PlaylistPanelVideoWrapperRenderer != nil {
-						v.PlaylistPanelVideoRenderer = &v.PlaylistPanelVideoWrapperRenderer.PrimaryRenderer.PlaylistPanelVideoRenderer
-					}
-					if v.PlaylistPanelVideoRenderer.Selected {
-						foundSelected = true
-					}
-					if !v.PlaylistPanelVideoRenderer.Selected && !foundSelected {
-						continue
-					}
-					if n > 5 {
-						break
-					}
-					n++
-					title := v.PlaylistPanelVideoRenderer.Title.Runs[0].Text
-					artist := v.PlaylistPanelVideoRenderer.ShortBylineText.Runs[0].Text
-					sl := "#" + strconv.Itoa(n-1) + ": " + title + " - " + artist + ", "
-					if n == 1 {
-						sl = strings.TrimPrefix(sl, "#"+strconv.Itoa(n-1)+": ")
-					}
-					s += sl
-				}
-				s = strings.TrimSuffix(s, ", ")
-
-				useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
+				return
+			}
+			bb, err := io.ReadAll(resp.Body)
+			if err != nil {
+				a.helixBot.SendChatMessage(&helix.SendChatMessageParams{
 					BroadcasterID:        event.BroadcasterUserId,
 					SenderID:             properUserID,
-					Message:              s,
+					Message:              "Failed to read details for currently playing song.",
 					ReplyParentMessageID: event.MessageId,
 				})
+				return
 			}
+			err = json.Unmarshal(bb, &song)
+			if err != nil {
+				a.helixBot.SendChatMessage(&helix.SendChatMessageParams{
+					BroadcasterID:        event.BroadcasterUserId,
+					SenderID:             properUserID,
+					Message:              "Failed to check data for currently playing song.",
+					ReplyParentMessageID: event.MessageId,
+				})
+				return
+			}
+
+			// song now is correct
+
+			// append queue
+			s := "Now: " + song.Title + " - " + song.Artist + ", "
+			for i, v := range songQueue {
+				title := v.Song.Title
+				artist := v.Song.Artist
+				sl := "#" + strconv.Itoa(i+1) + ": " + title + " - " + artist + ", "
+				s += sl
+			}
+			s = strings.TrimSuffix(s, ", ")
+			a.helixBot.SendChatMessage(&helix.SendChatMessageParams{
+				BroadcasterID:        event.BroadcasterUserId,
+				SenderID:             properUserID,
+				Message:              s,
+				ReplyParentMessageID: event.MessageId,
+			})
 			return
 		}
 	})

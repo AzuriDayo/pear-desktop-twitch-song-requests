@@ -19,6 +19,6 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		log.Println(song.Title, song.SearchOrigin, song.ImageUrl)
+		log.Println(song.Title, song.VideoID, song.SearchOrigin, song.ImageUrl, song.RawTimeData)
 	}
 }

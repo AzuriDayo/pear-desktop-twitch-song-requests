@@ -17,7 +17,7 @@ import (
 	"github.com/nicklaw5/helix/v2"
 )
 
-func (a *App) processTwitchOAuth(c echo.Context) error {
+func (a *App) handleApiV1TwitchOAuthPOST(c echo.Context) error {
 	// auth data in url hash string params as get request
 	body := c.Request().Body
 	rawBodyData, err := io.ReadAll(body)

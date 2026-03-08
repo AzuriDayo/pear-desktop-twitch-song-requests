@@ -11,9 +11,35 @@ export default () => {
 	const { song_queue, isLoaded } = useAppSelector(
 		(state) => state.songQueueState,
 	);
+	const playerState = useAppSelector((state) => state.musicPlayerState);
 
 	return (
 		<div>
+			<div>
+				<h4>Currently playing:</h4>
+				<a
+					target="_blank"
+					href={`${playerState.videoUrl}`}
+					style={{
+						display: "flex",
+						flexDirection: "row",
+						alignItems: "center",
+						justifyContent: "center",
+					}}
+				>
+					<img
+						style={{
+							maxHeight: "5vw",
+							marginRight: "20px",
+							borderRadius: "3px",
+						}}
+						src={`${playerState.albumArtUrl}`}
+					></img>
+					<span>{`${playerState.artistName} - ${playerState.songName}`}</span>
+				</a>
+			</div>
+			<br />
+			<br />
 			{isLoaded ? (
 				song_queue.length > 0 ? (
 					<List

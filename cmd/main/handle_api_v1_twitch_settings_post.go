@@ -14,7 +14,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func (a *App) processTwitchSettings(c echo.Context) error {
+func (a *App) handleApiV1SettingsPATCH(c echo.Context) error {
 	// auth data in url hash string params as get request
 	body := c.Request().Body
 	rawBodyData, err := io.ReadAll(body)

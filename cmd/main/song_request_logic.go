@@ -4,18 +4,14 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
-	"io"
 	"log"
 	"net/http"
-	"os"
-	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
-	"github.com/azuridayo/pear-desktop-twitch-song-requests/gen/model"
 	. "github.com/azuridayo/pear-desktop-twitch-song-requests/gen/table"
+
+	"github.com/azuridayo/pear-desktop-twitch-song-requests/gen/model"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/data"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/databaseconn"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/songrequests"
@@ -25,68 +21,44 @@ import (
 	"golang.org/x/net/websocket"
 )
 
-var srChan = make(chan struct {
-	song  *songrequests.SongResult
-	event twitch.EventChannelChatMessage
-})
-
-func (a *App) songRequestLogic(song *songrequests.SongResult, event twitch.EventChannelChatMessage) {
-	// Check if song ends <4s to prevent player state changes timing fkup
-	a.safeLockMutexWaitForSongEnds(4)
+func (a *App) songRequestLogic(song *songrequests.SongResult, event twitch.EventChannelChatMessage, properUserID string, useProperHelix *helix.Client) {
+	songQueueMutex.Lock()
 	defer songQueueMutex.Unlock()
 
-	var useProperHelix *helix.Client
-	properUserID := ""
-	if a.twitchDataStructBot.isAuthenticated {
-		useProperHelix = a.helixBot
-		properUserID = a.twitchDataStructBot.userID
-	} else {
-		useProperHelix = a.helix
-		properUserID = a.twitchDataStruct.userID
-	}
-
-	for _, v := range songQueue {
-		if song.VideoID == v.Song.VideoID {
-			// Song was added too fast, between internal api calls
-			return
-		}
-	}
-
-	b := echo.Map{
-		"videoId":        song.VideoID,
-		"insertPosition": "INSERT_AFTER_CURRENT_VIDEO",
-	}
-	bb, _ := json.Marshal(b)
-	resp, err := http.Post("http://"+songrequests.GetPearDesktopHost()+"/api/v1/queue", "application/json", bytes.NewBuffer(bb))
-	if err != nil || resp.StatusCode != http.StatusNoContent {
-		emsg := "Internal error when adding song to queue. Disregard previous message."
-		log.Println(emsg, err)
-		useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
-			BroadcasterID:        event.BroadcasterUserId,
-			SenderID:             properUserID,
-			Message:              emsg,
-			ReplyParentMessageID: event.MessageId,
-		})
-		return
-	}
-	if strings.EqualFold(event.BroadcasterUserLogin, a.twitchDataStructBot.login) {
-		log.Println("hehe chatter " + event.ChatterUserLogin + ": Queued song " + song.Title + " - " + song.Artist)
-	} else {
-		log.Println(event.ChatterUserLogin + ": Queued song " + song.Title + " - " + song.Artist)
-	}
-
-	addedSongIndex := -1
-	afterVideoIndex := -1
-	afterVideoId := ""
-	if len(songQueue) > 0 {
-		afterVideoId = songQueue[len(songQueue)-1].Song.VideoID
-	}
 	songQueueItem := SongQueueItem{
 		RequestedBy: event.ChatterUserLogin,
 		Song:        *song,
 		IsNinja:     strings.EqualFold(event.BroadcasterUserLogin, a.twitchDataStructBot.login),
 	}
 	songQueue = append(songQueue, songQueueItem)
+
+	if len(songQueue) == 1 {
+		// 1st new queue item must immediately add to next in raw player
+		b := echo.Map{
+			"videoId":        song.VideoID,
+			"insertPosition": "INSERT_AFTER_CURRENT_VIDEO",
+		}
+		bb, _ := json.Marshal(b)
+		resp, err := http.Post("http://"+songrequests.GetPearDesktopHost()+"/api/v1/queue", "application/json", bytes.NewBuffer(bb))
+		if err != nil || resp.StatusCode != http.StatusNoContent {
+			emsg := "Internal error when adding song to queue"
+			log.Println(emsg, err)
+			useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
+				BroadcasterID:        event.BroadcasterUserId,
+				SenderID:             properUserID,
+				Message:              emsg,
+				ReplyParentMessageID: event.MessageId,
+			})
+			return
+		}
+		if strings.EqualFold(event.BroadcasterUserLogin, a.twitchDataStructBot.login) {
+			log.Println("hehe chatter " + event.ChatterUserLogin + ": Queued song " + song.Title + " - " + song.Artist)
+		} else {
+			log.Println(event.ChatterUserLogin + ": Queued song " + song.Title + " - " + song.Artist)
+		}
+	}
+
+	// Broadcast song added to queue to browser control panel
 	queueInfoOnAdd, _ := json.Marshal(echo.Map{
 		"type": "QUEUE_ADD",
 		"song": songQueueItem,
@@ -130,180 +102,11 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, event twitch.Event
 			return
 		}
 	}()
-	if afterVideoId == "" {
-		// do nothing, it is already in the right position
-		return
-	}
 
-	// Fetch new q details
-	// Get q info
-	queue := songrequests.QueueResponse{}
-
-	triedTooManyTimes := make(chan struct{}, 1)
-	tries := 0
-	const maxAttempts = 15
-OuterLoop:
-	for {
-		time.Sleep(time.Millisecond * 500)
-		select {
-		case <-triedTooManyTimes:
-			break OuterLoop
-		default:
-			tries++
-			if tries > maxAttempts {
-				triedTooManyTimes <- struct{}{}
-				break
-			}
-			resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/queue")
-			if err != nil || resp.StatusCode != http.StatusOK {
-				emsg := "Internal error when checking if song is already in queue. Disregard previous message."
-				log.Println(emsg, err)
-				useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
-					BroadcasterID:        event.BroadcasterUserId,
-					SenderID:             properUserID,
-					Message:              emsg,
-					ReplyParentMessageID: event.MessageId,
-				})
-				return
-			}
-			qb, err := io.ReadAll(resp.Body)
-			if err != nil {
-				emsg := "Internal error processing data to check if song is already in queue. Disregard previous message."
-				log.Println(emsg, err)
-				useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
-					BroadcasterID:        event.BroadcasterUserId,
-					SenderID:             properUserID,
-					Message:              emsg,
-					ReplyParentMessageID: event.MessageId,
-				})
-				return
-			}
-			err = json.Unmarshal(qb, &queue)
-			resp.Body.Close()
-			if err != nil {
-				emsg := event.Broadcaster.BroadcasterUserLogin + " Failed to check queue order. Must fix the song order manually!"
-				log.Println(emsg, err)
-				useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
-					BroadcasterID:        event.BroadcasterUserId,
-					SenderID:             properUserID,
-					Message:              emsg,
-					ReplyParentMessageID: event.MessageId,
-				})
-				return
-			}
-			addedSongIndex = -1
-			afterVideoIndex = -1
-			for i := len(queue.Items) - 1; i >= 0; i-- {
-				v := queue.Items[i]
-				compareVideoIDs := map[string]struct{}{}
-				if v.PlaylistPanelVideoWrapperRenderer != nil {
-					compareVideoIDs[v.PlaylistPanelVideoWrapperRenderer.PrimaryRenderer.PlaylistPanelVideoRenderer.VideoId] = struct{}{}
-					for _, v2 := range v.PlaylistPanelVideoWrapperRenderer.Counterpart {
-						compareVideoIDs[v2.CounterpartRenderer.PlaylistPanelVideoRenderer.VideoId] = struct{}{}
-					}
-				}
-				if v.PlaylistPanelVideoRenderer != nil {
-					compareVideoIDs[v.PlaylistPanelVideoRenderer.VideoId] = struct{}{}
-				}
-				if _, ok := compareVideoIDs[afterVideoId]; ok {
-					afterVideoIndex = i
-				}
-				if _, ok := compareVideoIDs[song.VideoID]; ok {
-					addedSongIndex = i
-				}
-				if afterVideoIndex != -1 && addedSongIndex != -1 {
-					break
-				}
-			}
-			if addedSongIndex != -1 && afterVideoIndex != -1 {
-				break OuterLoop
-			}
-		}
-	}
-
-	// get song index & drag song down to wherever is needed
-	if addedSongIndex == -1 || afterVideoIndex == -1 {
-		fpath := "debug_dumps"
-		fname := fmt.Sprintf("queue_failed_%s_%s_%s.json", song.VideoID, strconv.Itoa(addedSongIndex), strconv.Itoa(afterVideoIndex))
-		fullpathname := filepath.Join(fpath, fname)
-		qd, _ := json.MarshalIndent(queue, "", "    ")
-		err := os.MkdirAll(fpath, os.ModePerm)
-		if err == nil {
-			os.WriteFile(fullpathname, qd, 0644)
-		}
-		useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
-			BroadcasterID:        event.BroadcasterUserId,
-			SenderID:             properUserID,
-			Message:              event.Broadcaster.BroadcasterUserLogin + " Failed to queue song in the right order. Must fix the song order manually!",
-			ReplyParentMessageID: event.MessageId,
-		})
-		return
-	}
-
-	b2, _ := json.Marshal(echo.Map{
-		"toIndex": afterVideoIndex,
+	useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
+		BroadcasterID:        event.BroadcasterUserId,
+		SenderID:             properUserID,
+		Message:              "Added song: " + song.Title + " - " + song.Artist + " " + "https://youtu.be/" + song.VideoID,
+		ReplyParentMessageID: event.MessageId,
 	})
-	req, _ := http.NewRequest(http.MethodPatch, "http://"+songrequests.GetPearDesktopHost()+"/api/v1/queue/"+strconv.Itoa(addedSongIndex), bytes.NewBuffer(b2))
-	req.Header.Set("Content-Type", "application/json")
-	resp2, err := http.DefaultClient.Do(req)
-	if err != nil || resp2.StatusCode != http.StatusNoContent {
-		useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
-			BroadcasterID:        event.BroadcasterUserId,
-			SenderID:             properUserID,
-			Message:              event.Broadcaster.BroadcasterUserLogin + " Failed to move song in the right order. Must fix the song order manually!",
-			ReplyParentMessageID: event.MessageId,
-		})
-		return
-	}
-	// Already replied to chatter song is alr added to q
-}
-
-func (a *App) safeLockMutexWaitForSongEnds(underTimeInSeconds int) {
-	songQueueMutex.Lock()
-	if playerInfo.IsPlaying && playerInfo.Song.SongDuration-playerInfo.Position <= underTimeInSeconds {
-		currentVideoId := playerInfo.Song.VideoId
-		// This unlock relock allows for <1s remaining time check
-
-		queue := songrequests.QueueResponse{}
-		timeout := time.After(time.Duration(underTimeInSeconds+10) * time.Second) // give extra 10 seconds buffer in case of api delay
-		for {
-			time.Sleep(200 * time.Millisecond)
-			select {
-			case <-timeout:
-				return
-			default:
-				shouldBreak := false
-				resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/queue")
-				if err != nil || resp.StatusCode != http.StatusOK {
-					continue
-				}
-				qb, err := io.ReadAll(resp.Body)
-				if err != nil {
-					continue
-				}
-				err = json.Unmarshal(qb, &queue)
-				resp.Body.Close()
-				if err != nil {
-					continue
-				}
-
-				for _, v := range queue.Items {
-					if v.PlaylistPanelVideoWrapperRenderer != nil {
-						v.PlaylistPanelVideoRenderer = &v.PlaylistPanelVideoWrapperRenderer.PrimaryRenderer.PlaylistPanelVideoRenderer
-					}
-					if v.PlaylistPanelVideoRenderer.Selected && v.PlaylistPanelVideoRenderer.VideoId != currentVideoId {
-						shouldBreak = true
-						break
-					}
-					if v.PlaylistPanelVideoRenderer.Selected {
-						break
-					}
-				}
-
-				if shouldBreak {
-					return
-				}
-			}
-		}
-	}
 }
