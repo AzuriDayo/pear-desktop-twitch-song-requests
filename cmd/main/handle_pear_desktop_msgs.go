@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 
@@ -59,7 +60,51 @@ func (a *App) handlePearDesktopMsgs() {
 
 				if len(songQueue) > 0 {
 					queueHead := songQueue[0]
-					if queueHead.Song.VideoID == newVideoId {
+					isQueueHeadPlayingNow := queueHead.Song.VideoID == newVideoId
+					if !isQueueHeadPlayingNow {
+						// get queue
+						queue := songrequests.QueueResponse{}
+						resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/queue")
+						if err == nil && resp.StatusCode == http.StatusOK {
+							var qb []byte
+							qb, err = io.ReadAll(resp.Body)
+							if err == nil {
+								err = json.Unmarshal(qb, &queue)
+								if err == nil {
+									resp.Body.Close()
+									// compare all videoid
+									// get all video ids and counterparts
+									for i := len(queue.Items) - 1; i >= 0; i-- {
+										v := queue.Items[i]
+										compareVideoIDs := map[string]struct{}{}
+										// all counterparts
+										if v.PlaylistPanelVideoWrapperRenderer != nil {
+											compareVideoIDs[v.PlaylistPanelVideoWrapperRenderer.PrimaryRenderer.PlaylistPanelVideoRenderer.VideoId] = struct{}{}
+											for _, v2 := range v.PlaylistPanelVideoWrapperRenderer.Counterpart {
+												compareVideoIDs[v2.CounterpartRenderer.PlaylistPanelVideoRenderer.VideoId] = struct{}{}
+											}
+										}
+										// native videoid
+										if v.PlaylistPanelVideoRenderer != nil {
+											compareVideoIDs[v.PlaylistPanelVideoRenderer.VideoId] = struct{}{}
+										}
+
+										// compare newVideoId and compareVideoIds and queueHead set in isQueueHeadPlayingNow
+										okNewVideoId := false
+										okQueueHead := false
+										_, okQueueHead = compareVideoIDs[queueHead.Song.VideoID]
+										_, okNewVideoId = compareVideoIDs[newVideoId]
+										if okNewVideoId && okQueueHead {
+											isQueueHeadPlayingNow = true
+											break
+										}
+									}
+								}
+							}
+						}
+					}
+
+					if isQueueHeadPlayingNow {
 						songQueue = songQueue[1:]
 						queueInfoOnShift, _ := json.Marshal(echo.Map{
 							"type": "QUEUE_SHIFT",
