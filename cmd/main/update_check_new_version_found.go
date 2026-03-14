@@ -2,6 +2,8 @@
 
 package main
 
-func checkUpdatesResult(newVersion string) {
+import "log"
 
+func checkUpdatesResult(newVersion string) {
+	log.Println("Download the latest release here: https://github.com/" + githubRepositoryOwner + "/" + githubRepositoryName + "/releases/tag/" + newVersion)
 }

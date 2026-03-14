@@ -11,6 +11,6 @@ import (
 func main() {
 	b := Popup.LazyDialog("Open github", "Do you want to open github?")
 	if b {
-		exec.Command("cmd", "/c", "start", "https://github.com/AzuriDayo_/pear-desktop-twitch-song-requests").Start()
+		exec.Command("cmd", "/c", "start", "https://github.com/AzuriDayo/pear-desktop-twitch-song-requests").Start()
 	}
 }
