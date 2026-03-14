@@ -39,6 +39,8 @@ type twitchData struct {
 func main() {
 	setTitle("Pear Desktop Twitch Song Requests by AzuriDayo_")
 	log.Println("Starting Pear Desktop Twitch Song Requests", version)
+	checkForUpdates()
+
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	helpers.PreflightTest()

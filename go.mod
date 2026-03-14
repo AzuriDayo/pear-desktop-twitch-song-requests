@@ -5,6 +5,7 @@ go 1.26.1
 require (
 	github.com/go-jet/jet/v2 v2.14.0
 	github.com/golang-migrate/migrate/v4 v4.19.1
+	github.com/google/go-github/v84 v84.0.0
 	github.com/joeyak/go-twitch-eventsub/v3 v3.0.1
 	github.com/labstack/echo/v4 v4.13.4
 	github.com/lxi1400/GoTitle v0.0.0-20210314075355-9d4645c96c0e
@@ -17,10 +18,12 @@ require (
 )
 
 require (
+	github.com/ChromeTemp/Popup v1.2.0 // indirect
 	github.com/coder/websocket v1.8.14 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
+	github.com/google/go-querystring v1.2.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
