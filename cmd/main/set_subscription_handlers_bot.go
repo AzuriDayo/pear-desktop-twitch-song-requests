@@ -269,6 +269,9 @@ func (a *App) SetSubscriptionHandlersBot() {
 				artist := v.Song.Artist
 				sl := "#" + strconv.Itoa(i+1) + ": " + title + " - " + artist + ", "
 				s += sl
+				if i >= 4 {
+					break
+				}
 			}
 			s = strings.TrimSuffix(s, ", ")
 			useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
