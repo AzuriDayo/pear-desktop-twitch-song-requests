@@ -25,6 +25,7 @@ type SongResult struct {
 	RawTimeData  string `json:"-"`
 	ImageUrl     string `json:"imageUrl"`
 	SearchOrigin string `json:"-"`
+	IsUnknown    bool   `json:"-"`
 }
 
 type apiSearchSongResult struct {

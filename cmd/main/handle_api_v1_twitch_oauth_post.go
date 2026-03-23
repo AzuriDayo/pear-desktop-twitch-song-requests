@@ -79,9 +79,7 @@ func (a *App) handleApiV1TwitchOAuthPOST(c echo.Context) error {
 			"error": "cannot save token in database",
 		})
 	}
-	defer func() {
-		db.Close()
-	}()
+	defer db.Close()
 	selectedTwitchDataStruct := a.twitchDataStruct
 	if tokenForBot {
 		if a.twitchDataStruct.login == "" {

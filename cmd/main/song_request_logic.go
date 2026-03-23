@@ -1,19 +1,12 @@
 package main
 
-//lint:file-ignore ST1001 Dot imports by jet
 import (
 	"bytes"
 	"encoding/json"
 	"log"
 	"net/http"
 	"strings"
-	"time"
 
-	. "github.com/azuridayo/pear-desktop-twitch-song-requests/gen/table"
-
-	"github.com/azuridayo/pear-desktop-twitch-song-requests/gen/model"
-	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/data"
-	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/databaseconn"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/songrequests"
 	"github.com/joeyak/go-twitch-eventsub/v3"
 	"github.com/labstack/echo/v4"
@@ -21,14 +14,15 @@ import (
 	"golang.org/x/net/websocket"
 )
 
-func (a *App) songRequestLogic(song *songrequests.SongResult, event twitch.EventChannelChatMessage, properUserID string, useProperHelix *helix.Client) {
+func (a *App) songRequestLogic(song *songrequests.SongResult, requestedStringIsSameVideoID bool, event twitch.EventChannelChatMessage, properUserID string, useProperHelix *helix.Client) {
 	songQueueMutex.Lock()
 	defer songQueueMutex.Unlock()
 
 	songQueueItem := SongQueueItem{
-		RequestedBy: event.ChatterUserLogin,
-		Song:        *song,
-		IsNinja:     strings.EqualFold(event.BroadcasterUserLogin, a.twitchDataStructBot.login),
+		RequestedBy:       event.ChatterUserLogin,
+		RequestedByUserID: event.ChatterUserId,
+		Song:              *song,
+		IsNinja:           strings.EqualFold(event.BroadcasterUserLogin, a.twitchDataStructBot.login),
 	}
 	songQueue = append(songQueue, songQueueItem)
 
@@ -65,48 +59,31 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, event twitch.Event
 	a.clientsMu.Unlock()
 
 	// save to history
-	go func() {
-		db, err := databaseconn.NewDBConnection()
-		if err != nil {
-			log.Println("Somehow failed to add !sr history to database")
-			return
-		}
-		srData := model.SongRequests{
-			VideoID:    song.VideoID,
-			SongTitle:  song.Title,
-			ArtistName: song.Artist,
-			ImageURL:   song.ImageUrl,
-		}
-		stmt := SongRequests.INSERT(SongRequests.AllColumns).MODEL(srData).ON_CONFLICT(SongRequests.VideoID).DO_NOTHING()
-		_, err = stmt.Exec(db)
-		if err != nil {
-			log.Println("Somehow failed to save !sr song to database")
-			return
-		}
-		srrData := model.SongRequestRequesters{
-			VideoID:        song.VideoID,
-			TwitchUsername: event.ChatterUserLogin,
-			RequestedAt:    time.Now().Local().Format(data.TWITCH_SERVER_DATE_LAYOUT),
-			UserID:         event.ChatterUserId,
-			IsNinja:        strings.EqualFold(event.BroadcasterUserLogin, a.twitchDataStructBot.login),
-		}
-		stmt = SongRequestRequesters.INSERT(SongRequestRequesters.AllColumns).MODEL(srrData)
-		_, err = stmt.Exec(db)
-		if err != nil {
-			log.Println("Somehow failed to save !sr requester name to database")
-			return
-		}
-	}()
+	if !song.IsUnknown {
+		isNinja := strings.EqualFold(event.BroadcasterUserLogin, a.twitchDataStructBot.login)
+		go saveSongHistory(song, event.ChatterUserLogin, event.ChatterUserId, isNinja)
+	}
+	// if it is unknown, it will be saved later
 
 	if strings.EqualFold(event.BroadcasterUserLogin, a.twitchDataStructBot.login) {
 		log.Println("hehe chatter " + event.ChatterUserLogin + ": Queued song " + song.Title + " - " + song.Artist)
 	} else {
 		log.Println(event.ChatterUserLogin + ": Queued song " + song.Title + " - " + song.Artist)
 	}
-	useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
-		BroadcasterID:        event.BroadcasterUserId,
-		SenderID:             properUserID,
-		Message:              "Added song: " + song.Title + " - " + song.Artist + " " + "https://youtu.be/" + song.VideoID,
-		ReplyParentMessageID: event.MessageId,
-	})
+
+	if requestedStringIsSameVideoID {
+		useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
+			BroadcasterID:        event.BroadcasterUserId,
+			SenderID:             properUserID,
+			Message:              "Added song: " + song.Title + " - " + song.Artist + " " + "https://youtu.be/" + song.VideoID,
+			ReplyParentMessageID: event.MessageId,
+		})
+	} else {
+		useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
+			BroadcasterID:        event.BroadcasterUserId,
+			SenderID:             properUserID,
+			Message:              "Added song: https://youtu.be/" + song.VideoID,
+			ReplyParentMessageID: event.MessageId,
+		})
+	}
 }
