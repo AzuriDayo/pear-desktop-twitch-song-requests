@@ -6,7 +6,9 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
+	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/helpers"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/songrequests"
 	"github.com/joeyak/go-twitch-eventsub/v3"
 	"github.com/labstack/echo/v4"
@@ -43,6 +45,35 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, requestedStringIsS
 				Message:              emsg,
 				ReplyParentMessageID: event.MessageId,
 			})
+			return
+		}
+
+		// validate if song was really added
+		nextInQueueIsAdded := false
+		intervalDelay := time.Second
+		maxRetries := 5
+		for range maxRetries {
+			time.Sleep(intervalDelay)
+			found, _ := helpers.FindAllVideoIDCounterparts(songQueue[0].Song.VideoID)
+			if found {
+				nextInQueueIsAdded = true
+				break
+			}
+		}
+
+		// Notify failed
+		if !nextInQueueIsAdded {
+			senderID := a.twitchDataStruct.userID
+			if a.twitchDataStructBot.isAuthenticated {
+				senderID = a.twitchDataStructBot.userID
+			}
+			a.helix.SendChatMessage(&helix.SendChatMessageParams{
+				BroadcasterID: a.twitchDataStruct.userID,
+				SenderID:      senderID,
+				Message:       "Sorry " + songQueue[0].RequestedBy + " , I failed to add https://youtu.be/" + songQueue[0].Song.VideoID + " next and will be removed from queue.",
+			})
+
+			songQueue = songQueue[1:]
 			return
 		}
 	}

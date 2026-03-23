@@ -97,9 +97,11 @@ func (a *App) handlePearDesktopMsgs() {
 							}
 							a.clientsMu.Unlock()
 
+							// TODO: find out why it wont add song to queue mid-queue for "problematic song"
 							if len(songQueue) > 0 {
+								newQueueHead := songQueue[0]
 								b := echo.Map{
-									"videoId":        songQueue[0].Song.VideoID,
+									"videoId":        newQueueHead.Song.VideoID,
 									"insertPosition": "INSERT_AFTER_CURRENT_VIDEO",
 								}
 								bb, _ := json.Marshal(b)
@@ -108,35 +110,35 @@ func (a *App) handlePearDesktopMsgs() {
 									emsg := "Internal error when adding song to pear desktop"
 									log.Println(emsg, err)
 								}
-							}
 
-							// validate if song was really added
-							intervalDelay := time.Second
+								// validate if song was really added
+								intervalDelay := time.Second
 
-							maxRetries := 5
-							for range maxRetries {
-								time.Sleep(intervalDelay)
-								found, _ := helpers.FindAllVideoIDCounterparts(songQueue[0].Song.VideoID)
-								if found {
-									nextInQueueIsAdded = true
-									break
+								maxRetries := 5
+								for range maxRetries {
+									time.Sleep(intervalDelay)
+									found, _ := helpers.FindAllVideoIDCounterparts(newQueueHead.Song.VideoID)
+									if found {
+										nextInQueueIsAdded = true
+										break
+									}
 								}
-							}
 
-							// Notify failed
-							if !nextInQueueIsAdded {
-								senderID := a.twitchDataStruct.userID
-								if a.twitchDataStructBot.isAuthenticated {
-									senderID = a.twitchDataStructBot.userID
+								// Notify failed
+								if !nextInQueueIsAdded {
+									senderID := a.twitchDataStruct.userID
+									if a.twitchDataStructBot.isAuthenticated {
+										senderID = a.twitchDataStructBot.userID
+									}
+									a.helix.SendChatMessage(&helix.SendChatMessageParams{
+										BroadcasterID: a.twitchDataStruct.userID,
+										SenderID:      senderID,
+										Message:       "Sorry " + newQueueHead.RequestedBy + " , I failed to add https://youtu.be/" + newQueueHead.Song.VideoID + " next and will be removed from queue.",
+									})
 								}
-								a.helix.SendChatMessage(&helix.SendChatMessageParams{
-									BroadcasterID: a.twitchDataStruct.userID,
-									SenderID:      senderID,
-									Message:       "Sorry " + songQueue[0].RequestedBy + ", I failed to add https://youtu.be/" + songQueue[0].Song.VideoID + " next and will be removed from queue.",
-								})
-							}
 
-							// Failed to add this song, we go for the one after this one
+								// Failed to add this song, we go for the one after this one
+							}
 						}
 					} else {
 						log.Println("Failed to play next song in queue: " + queueHead.Song.Title + " - " + queueHead.Song.Artist)

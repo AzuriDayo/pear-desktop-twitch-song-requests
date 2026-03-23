@@ -6,6 +6,7 @@ import (
 	"time"
 
 	. "github.com/azuridayo/pear-desktop-twitch-song-requests/gen/table"
+	. "github.com/go-jet/jet/v2/sqlite"
 
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/gen/model"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/data"
@@ -26,7 +27,16 @@ func saveSongHistory(song *songrequests.SongResult, chatterUserLogin, chatterUse
 		ArtistName: song.Artist,
 		ImageURL:   song.ImageUrl,
 	}
-	stmt := SongRequests.INSERT(SongRequests.AllColumns).MODEL(srData).ON_CONFLICT(SongRequests.VideoID).DO_NOTHING()
+	stmt := SongRequests.INSERT(SongRequests.AllColumns).MODEL(srData).ON_CONFLICT(SongRequests.VideoID).
+		DO_UPDATE(
+			SET(
+				SongRequests.SongTitle.SET(String(srData.SongTitle)),
+				SongRequests.ArtistName.SET(String(srData.ArtistName)),
+				SongRequests.ImageURL.SET(String(srData.ImageURL)),
+			).WHERE(
+				SongRequests.VideoID.EQ(String(srData.VideoID)),
+			),
+		)
 	_, err = stmt.Exec(db)
 	if err != nil {
 		log.Println("Somehow failed to save !sr song to database")
