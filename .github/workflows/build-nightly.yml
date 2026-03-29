@@ -11,7 +11,9 @@ jobs:
     - uses: actions/setup-go@v6
       with:
         go-version-file: go.mod
-    - run: go test ./...
+    - run: |
+        mkdir -p cmd/main/build
+        go test ./...
   build-and-publish:
     runs-on: ubuntu-latest
     permissions:
