@@ -1,4 +1,4 @@
-import something from "./response3.json" with { type: "json" };
+import something from "./search-podcast-episode_l-txZMzBmbA.json" with { type: "json" };
 
 const EMUSIC_VIDEO_TYPE = {
   ATV: "MUSIC_VIDEO_TYPE_ATV", // Album Music
@@ -18,6 +18,8 @@ const EMUSIC_PAGE_TYPE = {
 
 const contents = something.contents.tabbedSearchResultsRenderer.tabs;
 
+// Check for thumbnail element for videoId
+
 for (const tab of contents) {
   const tabContent = tab.tabRenderer.content.sectionListRenderer.contents;
   if (!tabContent) continue;
@@ -28,31 +30,29 @@ for (const tab of contents) {
       // Not always a video or music
       let title: string | null = null;
       let artistOrUploader: string | null = null;
-      const validRun = content.musicCardShelfRenderer?.title.runs.find((v) => {
-        if ((v.navigationEndpoint as any).watchEndpoint) {
-          return true;
-        }
-      });
+      // Get videoId from
+      const validRun =
+        content.musicCardShelfRenderer.thumbnailOverlay
+          .musicItemThumbnailOverlayRenderer; // im assuming musicItemThumbnailOverlayRenderer might be undefined because this is optional when artists show up in music card shelf renderer
       if (!validRun) continue;
-      const artistData = content.musicCardShelfRenderer?.subtitle.runs.find(
+      videoId =
+        validRun.content.musicPlayButtonRenderer.playNavigationEndpoint
+          .watchEndpoint.videoId;
+      const artistData = content.musicCardShelfRenderer.subtitle.runs.find(
         (v) => {
+          const pageType =
+            v.navigationEndpoint?.browseEndpoint
+              ?.browseEndpointContextSupportedConfigs
+              ?.browseEndpointContextMusicConfig?.pageType;
           if (
-            v.navigationEndpoint?.browseEndpoint
-              ?.browseEndpointContextSupportedConfigs
-              ?.browseEndpointContextMusicConfig?.pageType ===
-              EMUSIC_PAGE_TYPE.ARTIST ||
-            v.navigationEndpoint?.browseEndpoint
-              ?.browseEndpointContextSupportedConfigs
-              ?.browseEndpointContextMusicConfig?.pageType ===
-              EMUSIC_PAGE_TYPE.USER_CHANNEL
+            pageType === EMUSIC_PAGE_TYPE.ARTIST ||
+            pageType === EMUSIC_PAGE_TYPE.USER_CHANNEL
           ) {
             return true;
           }
         },
       );
       artistOrUploader = artistData ? artistData.text : null;
-      videoId = (validRun as any).navigationEndpoint.watchEndpoint.videoId;
-      title = validRun.text;
       if (title) console.log(`${title} - ${artistOrUploader} = ${videoId}`);
     }
 
@@ -89,6 +89,14 @@ for (const tab of contents) {
             .musicVideoType === EMUSIC_VIDEO_TYPE.OMV
         )
           mediaType = EMUSIC_VIDEO_TYPE.OMV;
+        if (
+          content.musicResponsiveListItemRenderer.overlay
+            ?.musicItemThumbnailOverlayRenderer.content.musicPlayButtonRenderer
+            .playNavigationEndpoint.watchEndpoint
+            ?.watchEndpointMusicSupportedConfigs.watchEndpointMusicConfig
+            .musicVideoType === EMUSIC_VIDEO_TYPE.PODCAST_EPISODE
+        )
+          mediaType = EMUSIC_VIDEO_TYPE.PODCAST_EPISODE;
         if (!mediaType) {
           continue;
         }
@@ -108,6 +116,9 @@ for (const tab of contents) {
                 ?.musicVideoType === EMUSIC_VIDEO_TYPE.UGC ||
               (run as any).navigationEndpoint?.watchEndpoint
                 ?.watchEndpointMusicSupportedConfigs?.watchEndpointMusicConfig
+                ?.musicVideoType === EMUSIC_VIDEO_TYPE.PODCAST_EPISODE ||
+              (run as any).navigationEndpoint?.watchEndpoint
+                ?.watchEndpointMusicSupportedConfigs?.watchEndpointMusicConfig
                 ?.musicVideoType === EMUSIC_VIDEO_TYPE.OMV
             ) {
               // This is the title text
@@ -118,9 +129,11 @@ for (const tab of contents) {
               (run as any).navigationEndpoint?.browseEndpoint
                 ?.browseEndpointContextSupportedConfigs
                 ?.browseEndpointContextMusicConfig?.pageType ===
-              (mediaType === EMUSIC_VIDEO_TYPE.UGC
-                ? EMUSIC_PAGE_TYPE.USER_CHANNEL
-                : EMUSIC_PAGE_TYPE.ARTIST)
+                EMUSIC_PAGE_TYPE.USER_CHANNEL ||
+              (run as any).navigationEndpoint?.browseEndpoint
+                ?.browseEndpointContextSupportedConfigs
+                ?.browseEndpointContextMusicConfig?.pageType ===
+                EMUSIC_PAGE_TYPE.ARTIST
             ) {
               // channel name
               artistOrUploader = run.text;

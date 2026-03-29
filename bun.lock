@@ -11,6 +11,7 @@
         "eslint-plugin-react-hooks": "^7.0.1",
         "eslint-plugin-react-refresh": "^0.5.2",
         "globals": "^17.4.0",
+        "json5": "^2.2.3",
         "prettier": "^3.8.1",
         "prettier-config-a11y": "^1.1.2",
         "rimraf": "^6.1.3",
