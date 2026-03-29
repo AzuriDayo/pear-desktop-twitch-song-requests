@@ -1,0 +1,109 @@
+{
+  "contents": {
+    "tabbedSearchResultsRenderer": {
+      "tabs": [
+        {
+          "tabRenderer": {
+            "title": "YT Music",
+            "selected": true,
+            "content": {
+              "sectionListRenderer": {
+                "contents": [
+                  {
+                    "itemSectionRenderer": {
+                      "contents": [
+                        {
+                          "didYouMeanRenderer": {
+                            "didYouMean": {
+                              "runs": [
+                                {
+                                  "text": "Did you mean:"
+                                }
+                              ]
+                            },
+                            "correctedQuery": {
+                              "runs": [
+                                {
+                                  "text": "38 Year",
+                                  "italics": true
+                                },
+                                {
+                                  "text": "-ci"
+                                }
+                              ]
+                            },
+                            "correctedQueryEndpoint": {
+                              "searchEndpoint": {
+                                "query": "38 Year-ci"
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "messageRenderer": {
+                            "text": {
+                              "runs": [
+                                {
+                                  "text": "No results for "
+                                },
+                                {
+                                  "text": "38xYeot-ci",
+                                  "bold": true
+                                },
+                                {
+                                  "text": "."
+                                }
+                              ]
+                            },
+                            "icon": {
+                              "iconType": "SEARCH"
+                            },
+                            "subtext": {
+                              "messageSubtextRenderer": {
+                                "text": {
+                                  "runs": [
+                                    {
+                                      "text": "Try different keywords"
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            "tabIdentifier": "music_search_catalog"
+          }
+        },
+        {
+          "tabRenderer": {
+            "endpoint": {
+              "searchEndpoint": {
+                "query": "38xYeot-ci",
+                "params": "agIYBA%3D%3D"
+              }
+            },
+            "title": "Library",
+            "content": {
+              "sectionListRenderer": {
+                "continuations": [
+                  {
+                    "reloadContinuationData": {
+                      "continuation": "EhoSCjM4eFllb3QtY2kaDGFnSVlCQSUzRCUzRA%3D%3D"
+                    }
+                  }
+                ]
+              }
+            },
+            "tabIdentifier": "music_search_library"
+          }
+        }
+      ]
+    }
+  }
+}

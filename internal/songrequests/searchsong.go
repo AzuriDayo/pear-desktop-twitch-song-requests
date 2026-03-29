@@ -128,6 +128,24 @@ type apiSearchSongResult struct {
 											} `json:"navigationEndpoint"`
 										} `json:"runs"`
 									} `json:"title"`
+									ThumbnailOverlay struct {
+										MusicItemThumbnailOverlayRenderer *struct {
+											Content struct {
+												MusicPlayButtonRenderer struct {
+													PlayNavigationEndpoint struct {
+														WatchEndpoint *struct {
+															WatchEndpointMusicSupportedConfigs struct {
+																WatchEndpointMusicConfig struct {
+																	MusicVideoType string `json:"musicVideoType"`
+																} `json:"watchEndpointMusicConfig"`
+															} `json:"watchEndpointMusicSupportedConfigs"`
+															VideoId string `json:"videoId"`
+														} `json:"watchEndpoint"`
+													} `json:"playNavigationEndpoint"`
+												} `json:"musicPlayButtonRenderer"`
+											} `json:"content"`
+										} `json:"musicItemThumbnailOverlayRenderer"`
+									} `json:"thumbnailOverlay"`
 								} `json:"musicCardShelfRenderer"`
 							} `json:"contents"`
 						} `json:"sectionListRenderer"`
@@ -171,7 +189,7 @@ func SearchSong(query string, minLength int, maxLength int) (*SongResult, error)
 		return nil, err
 	}
 
-	songResults := []SongResult{}
+	songResults := []*SongResult{}
 
 	// Start of contents inside search-songs.mts
 	contents := rawResults.Contents.TabbedSearchResultsRenderer.Tabs
@@ -188,6 +206,31 @@ func SearchSong(query string, minLength int, maxLength int) (*SongResult, error)
 				title := ""
 				artistOrUploader := ""
 				var validRun *struct {
+					Content struct {
+						MusicPlayButtonRenderer struct {
+							PlayNavigationEndpoint struct {
+								WatchEndpoint *struct {
+									WatchEndpointMusicSupportedConfigs struct {
+										WatchEndpointMusicConfig struct {
+											MusicVideoType string `json:"musicVideoType"`
+										} `json:"watchEndpointMusicConfig"`
+									} `json:"watchEndpointMusicSupportedConfigs"`
+									VideoId string `json:"videoId"`
+								} `json:"watchEndpoint"`
+							} `json:"playNavigationEndpoint"`
+						} `json:"musicPlayButtonRenderer"`
+					} `json:"content"`
+				} = nil
+				if content.MusicCardShelfRenderer.ThumbnailOverlay.MusicItemThumbnailOverlayRenderer != nil {
+					validRun = content.MusicCardShelfRenderer.ThumbnailOverlay.MusicItemThumbnailOverlayRenderer
+				}
+				// end find
+				if validRun == nil {
+					continue
+				}
+				// video-id found
+				// title
+				var titleRun *struct {
 					Text               string `json:"text"`
 					NavigationEndpoint *struct {
 						WatchEndpoint *struct {
@@ -195,16 +238,11 @@ func SearchSong(query string, minLength int, maxLength int) (*SongResult, error)
 						} `json:"watchEndpoint"`
 					} `json:"navigationEndpoint"`
 				} = nil
-				// const validRun = content.musicCardShelfRenderer?.title.runs.find
 				for _, v := range content.MusicCardShelfRenderer.Title.Runs {
-					if v.NavigationEndpoint.WatchEndpoint != nil {
-						validRun = &v
+					if v.Text != "" {
+						titleRun = &v
 						break
 					}
-				}
-				// end find
-				if validRun == nil {
-					continue
 				}
 				var artistData *struct {
 					Text               string `json:"text"`
@@ -239,12 +277,12 @@ func SearchSong(query string, minLength int, maxLength int) (*SongResult, error)
 				if artistData != nil {
 					artistOrUploader = artistData.Text
 				}
-				videoId = validRun.NavigationEndpoint.WatchEndpoint.VideoId
-				title = validRun.Text
+				videoId = validRun.Content.MusicPlayButtonRenderer.PlayNavigationEndpoint.WatchEndpoint.VideoId
+				title = titleRun.Text
 
 				timeData := content.MusicCardShelfRenderer.Subtitle.Runs[len(content.MusicCardShelfRenderer.Subtitle.Runs)-1].Text
 
-				songResults = append(songResults, SongResult{
+				songResults = append(songResults, &SongResult{
 					Title:        title,
 					Artist:       artistOrUploader,
 					VideoID:      videoId,
@@ -277,11 +315,11 @@ func SearchSong(query string, minLength int, maxLength int) (*SongResult, error)
 						fallthrough
 					case MUSIC_VIDEO_TYPE_OMV:
 						fallthrough
+					case MUSIC_VIDEO_TYPE_PODCAST_EPISODE:
+						fallthrough
 					case MUSIC_VIDEO_TYPE_UGC:
 						// do nothing, is valid
 					case MUSIC_VIDEO_TYPE_OTHER_VIDEO:
-						fallthrough
-					case MUSIC_VIDEO_TYPE_PODCAST_EPISODE:
 						// unsupported video type
 						continue
 					default:
@@ -304,7 +342,7 @@ func SearchSong(query string, minLength int, maxLength int) (*SongResult, error)
 									}
 								}
 							}
-							if compareMusicVideoType == MUSIC_VIDEO_TYPE_ATV || compareMusicVideoType == MUSIC_VIDEO_TYPE_OMV || compareMusicVideoType == MUSIC_VIDEO_TYPE_UGC {
+							if compareMusicVideoType == MUSIC_VIDEO_TYPE_ATV || compareMusicVideoType == MUSIC_VIDEO_TYPE_OMV || compareMusicVideoType == MUSIC_VIDEO_TYPE_UGC || compareMusicVideoType == MUSIC_VIDEO_TYPE_PODCAST_EPISODE {
 								mediaTitle = run.Text
 								videoId = run.NavigationEndpoint.WatchEndpoint.VideoId
 							}
@@ -318,22 +356,15 @@ func SearchSong(query string, minLength int, maxLength int) (*SongResult, error)
 									}
 								}
 							}
-							expectedMusicPageType := ""
-							if compareMusicPageType != "" {
-								if mediaType == MUSIC_VIDEO_TYPE_UGC {
-									expectedMusicPageType = MUSIC_PAGE_TYPE_USER_CHANNEL
-								} else {
-									expectedMusicPageType = MUSIC_PAGE_TYPE_ARTIST
-								}
-								if compareMusicPageType == expectedMusicPageType {
-									artistOrUploader = run.Text
-									timeData = flexColumn.MusicResponsiveListItemFlexColumnRenderer.Text.Runs[len(flexColumn.MusicResponsiveListItemFlexColumnRenderer.Text.Runs)-1].Text
-								}
+
+							if compareMusicPageType == MUSIC_PAGE_TYPE_ARTIST || compareMusicPageType == MUSIC_PAGE_TYPE_USER_CHANNEL {
+								artistOrUploader = run.Text
+								timeData = flexColumn.MusicResponsiveListItemFlexColumnRenderer.Text.Runs[len(flexColumn.MusicResponsiveListItemFlexColumnRenderer.Text.Runs)-1].Text
 							}
 						}
 					}
 
-					songResults = append(songResults, SongResult{
+					songResults = append(songResults, &SongResult{
 						Title:        mediaTitle,
 						Artist:       artistOrUploader,
 						VideoID:      videoId,
@@ -350,13 +381,13 @@ func SearchSong(query string, minLength int, maxLength int) (*SongResult, error)
 	var selectedSong *SongResult = nil
 	for _, v := range songResults {
 		if v.VideoID == query {
-			selectedSong = &v
+			selectedSong = v
 			break
 		}
 	}
 
 	if selectedSong == nil && len(songResults) > 0 {
-		selectedSong = &songResults[0]
+		selectedSong = songResults[0]
 	}
 
 	if selectedSong != nil {
