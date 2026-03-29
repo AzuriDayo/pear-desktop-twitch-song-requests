@@ -38,6 +38,9 @@ for (const tab of contents) {
       videoId =
         validRun.content.musicPlayButtonRenderer.playNavigationEndpoint
           .watchEndpoint.videoId;
+      const titleRun = content.musicCardShelfRenderer.title.runs.find(
+        (v) => v.text !== "",
+      );
       const artistData = content.musicCardShelfRenderer.subtitle.runs.find(
         (v) => {
           const pageType =
@@ -53,6 +56,7 @@ for (const tab of contents) {
         },
       );
       artistOrUploader = artistData ? artistData.text : null;
+      title = titleRun?.text ?? null;
       if (title) console.log(`${title} - ${artistOrUploader} = ${videoId}`);
     }
 
