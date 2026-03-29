@@ -15,7 +15,7 @@ require (
 	github.com/valyala/fastjson v1.6.10
 	golang.org/x/mod v0.34.0
 	golang.org/x/net v0.52.0
-	modernc.org/sqlite v1.47.0
+	modernc.org/sqlite v1.48.0
 )
 
 require (
