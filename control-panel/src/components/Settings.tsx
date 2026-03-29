@@ -128,7 +128,7 @@ export function Settings() {
 						disabled={!twitchRewardId.loaded}
 						onClick={() => {
 							(async () => {
-								let v = {
+								const v = {
 									value: twitchRewardId.value,
 									loaded: false,
 								};
