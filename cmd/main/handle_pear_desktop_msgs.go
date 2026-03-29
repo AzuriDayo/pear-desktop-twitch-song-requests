@@ -61,7 +61,7 @@ func (a *App) handlePearDesktopMsgs() {
 				playerInfo.Song = songinfo
 
 				if len(songQueue) > 0 {
-					queueHead := songQueue[0]
+					queueHead := &songQueue[0]
 					isQueueHeadPlayingNow := queueHead.Song.VideoID == newVideoId
 					if !isQueueHeadPlayingNow {
 						found, allVideoIDCounterparts := helpers.FindAllVideoIDCounterparts(queueHead.Song.VideoID)
@@ -97,9 +97,9 @@ func (a *App) handlePearDesktopMsgs() {
 							}
 							a.clientsMu.Unlock()
 
-							// TODO: find out why it wont add song to queue mid-queue for "problematic song"
+							// add next queue head in pear queue
 							if len(songQueue) > 0 {
-								newQueueHead := songQueue[0]
+								newQueueHead := &songQueue[0]
 								b := echo.Map{
 									"videoId":        newQueueHead.Song.VideoID,
 									"insertPosition": "INSERT_AFTER_CURRENT_VIDEO",
