@@ -9,9 +9,10 @@ import (
 var songQueueMutex = sync.RWMutex{}
 
 type SongQueueItem struct {
-	RequestedBy string                  `json:"requested_by"`
-	Song        songrequests.SongResult `json:"song"`
-	IsNinja     bool                    `json:"is_ninja"`
+	RequestedBy       string                  `json:"requested_by"`
+	RequestedByUserID string                  `json:"-"`
+	Song              songrequests.SongResult `json:"song"`
+	IsNinja           bool                    `json:"is_ninja"`
 }
 
 var songQueue = []SongQueueItem{}

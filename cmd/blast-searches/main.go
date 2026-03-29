@@ -14,7 +14,7 @@ func main() {
 		"!sr yena smartphone",
 	}
 	for _, v := range songs {
-		v = songrequests.ParseSearchQuery(v)
+		v, _ := songrequests.ParseSearchQuery(v)
 		song, err := songrequests.SearchSong(v, 60, 600)
 		if err != nil {
 			panic(err)

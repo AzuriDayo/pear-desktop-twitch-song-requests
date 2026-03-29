@@ -13,7 +13,7 @@ import (
 )
 
 func (a *App) songRequestSubmit(useProperHelix *helix.Client, properUserID string, event twitch.EventChannelChatMessage) {
-	s := songrequests.ParseSearchQuery(event.Message.Text)
+	s, isNativeVideoID := songrequests.ParseSearchQuery(event.Message.Text)
 	song, err := songrequests.SearchSong(strings.TrimPrefix(s, "-"), 60, 600)
 	if err != nil {
 		log.Println("Searching for song failed: "+event.Message.Text+"\n", err)
@@ -25,6 +25,17 @@ func (a *App) songRequestSubmit(useProperHelix *helix.Client, properUserID strin
 			ReplyParentMessageID: event.MessageId,
 		})
 		return
+	}
+
+	requestedStringIsSameVideoID := true
+	if isNativeVideoID && song.VideoID != s {
+		song.VideoID = s
+		song.Artist = "unknown"
+		song.ImageUrl = ""
+		song.RawTimeData = ""
+		song.Title = "unknown"
+		song.IsUnknown = true
+		requestedStringIsSameVideoID = false
 	}
 
 	// Loop through queue state to check if song is queued already
@@ -91,5 +102,5 @@ func (a *App) songRequestSubmit(useProperHelix *helix.Client, properUserID strin
 	}
 
 	// Committing to adding song to q
-	a.songRequestLogic(song, event, properUserID, useProperHelix)
+	a.songRequestLogic(song, requestedStringIsSameVideoID, event, properUserID, useProperHelix)
 }

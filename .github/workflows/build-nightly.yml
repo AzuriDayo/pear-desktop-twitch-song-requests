@@ -4,6 +4,17 @@ on:
   pull_request:
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/setup-go@v6
+      with:
+        go-version-file: go.mod
+    - run: |
+        mkdir -p cmd/main/build
+        touch cmd/main/build/index.html
+        go test ./...
   build-and-publish:
     runs-on: ubuntu-latest
     permissions:

@@ -20,9 +20,7 @@ func (a *App) loadSqliteSettings() error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		db.Close()
-	}()
+	defer db.Close()
 
 	results := []model.Settings{}
 	stmt := SELECT(Settings.Key, Settings.Value).FROM(Settings)

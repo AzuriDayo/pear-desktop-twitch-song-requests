@@ -3,12 +3,14 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"io"
 	"log"
 	"net/http"
+	"time"
 
+	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/helpers"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/songrequests"
 	"github.com/labstack/echo/v4"
+	"github.com/nicklaw5/helix/v2"
 	"github.com/valyala/fastjson"
 	"golang.org/x/net/websocket"
 )
@@ -59,72 +61,83 @@ func (a *App) handlePearDesktopMsgs() {
 				playerInfo.Song = songinfo
 
 				if len(songQueue) > 0 {
-					queueHead := songQueue[0]
+					queueHead := &songQueue[0]
 					isQueueHeadPlayingNow := queueHead.Song.VideoID == newVideoId
 					if !isQueueHeadPlayingNow {
-						// get queue
-						queue := songrequests.QueueResponse{}
-						resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/queue")
-						if err == nil && resp.StatusCode == http.StatusOK {
-							var qb []byte
-							qb, err = io.ReadAll(resp.Body)
-							if err == nil {
-								err = json.Unmarshal(qb, &queue)
-								if err == nil {
-									resp.Body.Close()
-									// compare all videoid
-									// get all video ids and counterparts
-									for i := len(queue.Items) - 1; i >= 0; i-- {
-										v := queue.Items[i]
-										compareVideoIDs := map[string]struct{}{}
-										// all counterparts
-										if v.PlaylistPanelVideoWrapperRenderer != nil {
-											compareVideoIDs[v.PlaylistPanelVideoWrapperRenderer.PrimaryRenderer.PlaylistPanelVideoRenderer.VideoId] = struct{}{}
-											for _, v2 := range v.PlaylistPanelVideoWrapperRenderer.Counterpart {
-												compareVideoIDs[v2.CounterpartRenderer.PlaylistPanelVideoRenderer.VideoId] = struct{}{}
-											}
-										}
-										// native videoid
-										if v.PlaylistPanelVideoRenderer != nil {
-											compareVideoIDs[v.PlaylistPanelVideoRenderer.VideoId] = struct{}{}
-										}
-
-										// compare newVideoId and compareVideoIds and queueHead set in isQueueHeadPlayingNow
-										okNewVideoId := false
-										okQueueHead := false
-										_, okQueueHead = compareVideoIDs[queueHead.Song.VideoID]
-										_, okNewVideoId = compareVideoIDs[newVideoId]
-										if okNewVideoId && okQueueHead {
-											isQueueHeadPlayingNow = true
-											break
-										}
-									}
-								}
+						found, allVideoIDCounterparts := helpers.FindAllVideoIDCounterparts(queueHead.Song.VideoID)
+						if found {
+							if _, ok := allVideoIDCounterparts[newVideoId]; ok {
+								isQueueHeadPlayingNow = true
 							}
 						}
 					}
 
 					if isQueueHeadPlayingNow {
-						songQueue = songQueue[1:]
-						queueInfoOnShift, _ := json.Marshal(echo.Map{
-							"type": "QUEUE_SHIFT",
-						})
-						a.clientsMu.Lock()
-						for ws := range a.clients {
-							websocket.Message.Send(ws, string(queueInfoOnShift))
+						// handle unknown with this new song detail
+						if queueHead.Song.IsUnknown {
+							// re-fill song details
+							queueHead.Song.Artist = string(v.GetStringBytes("song", "artist"))
+							queueHead.Song.ImageUrl = string(v.GetStringBytes("song", "imageSrc"))
+							queueHead.Song.Title = string(v.GetStringBytes("song", "title"))
+							// save history
+							go saveSongHistory(&queueHead.Song, queueHead.RequestedBy, queueHead.RequestedByUserID, queueHead.IsNinja)
+							// Send frontend for unknown vid update
+							// No info to send because it is already shifted from queue
 						}
-						a.clientsMu.Unlock()
 
-						if len(songQueue) > 0 {
-							b := echo.Map{
-								"videoId":        songQueue[0].Song.VideoID,
-								"insertPosition": "INSERT_AFTER_CURRENT_VIDEO",
+						nextInQueueIsAdded := false
+						for !nextInQueueIsAdded && len(songQueue) > 0 {
+							songQueue = songQueue[1:]
+							queueInfoOnShift, _ := json.Marshal(echo.Map{
+								"type": "QUEUE_SHIFT",
+							})
+							a.clientsMu.Lock()
+							for ws := range a.clients {
+								websocket.Message.Send(ws, string(queueInfoOnShift))
 							}
-							bb, _ := json.Marshal(b)
-							resp, err := http.Post("http://"+songrequests.GetPearDesktopHost()+"/api/v1/queue", "application/json", bytes.NewBuffer(bb))
-							if err != nil || resp.StatusCode != http.StatusNoContent {
-								emsg := "Internal error when adding song to pear desktop"
-								log.Println(emsg, err)
+							a.clientsMu.Unlock()
+
+							// add next queue head in pear queue
+							if len(songQueue) > 0 {
+								newQueueHead := &songQueue[0]
+								b := echo.Map{
+									"videoId":        newQueueHead.Song.VideoID,
+									"insertPosition": "INSERT_AFTER_CURRENT_VIDEO",
+								}
+								bb, _ := json.Marshal(b)
+								resp, err := http.Post("http://"+songrequests.GetPearDesktopHost()+"/api/v1/queue", "application/json", bytes.NewBuffer(bb))
+								if err != nil || resp.StatusCode != http.StatusNoContent {
+									emsg := "Internal error when adding song to pear desktop"
+									log.Println(emsg, err)
+								}
+
+								// validate if song was really added
+								intervalDelay := time.Second
+
+								maxRetries := 5
+								for range maxRetries {
+									time.Sleep(intervalDelay)
+									found, _ := helpers.FindAllVideoIDCounterparts(newQueueHead.Song.VideoID)
+									if found {
+										nextInQueueIsAdded = true
+										break
+									}
+								}
+
+								// Notify failed
+								if !nextInQueueIsAdded {
+									senderID := a.twitchDataStruct.userID
+									if a.twitchDataStructBot.isAuthenticated {
+										senderID = a.twitchDataStructBot.userID
+									}
+									a.helix.SendChatMessage(&helix.SendChatMessageParams{
+										BroadcasterID: a.twitchDataStruct.userID,
+										SenderID:      senderID,
+										Message:       "Sorry " + newQueueHead.RequestedBy + " , I failed to add https://youtu.be/" + newQueueHead.Song.VideoID + " next and will be removed from queue.",
+									})
+								}
+
+								// Failed to add this song, we go for the one after this one
 							}
 						}
 					} else {
