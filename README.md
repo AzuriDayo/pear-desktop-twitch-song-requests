@@ -20,3 +20,7 @@ This app adds song requests functionality to your Pear Desktop Music App!
 You should always see this application being released by `github-actions` and releases being `immutable` as indicated from the screenshot above. This ensures the software built only comes from this official GitHub repository.
 
 You can also validate the sha256 file hash from the release page as well. File hashes are indicated next to the file download link.
+
+### Long term vision
+
+It is my wish to have this application be digitally signed to be hassle free on Windows. As an indie developer, removing the Windows SmartScreen popup before running my own app would make me so happy.
