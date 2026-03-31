@@ -36,6 +36,16 @@ func (a *App) songRequestSubmit(useProperHelix *helix.Client, properUserID strin
 		song.Title = "unknown"
 		song.IsUnknown = true
 		requestedStringIsSameVideoID = false
+
+		// TODO: cleanup isUnknown code
+		// For now simply return early and deny song request
+		useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
+			BroadcasterID:        event.BroadcasterUserId,
+			SenderID:             properUserID,
+			Message:              "Sorry, this video was probably available in YouTube, but not in YouTube Music.",
+			ReplyParentMessageID: event.MessageId,
+		})
+		return
 	}
 
 	// Loop through queue state to check if song is queued already
