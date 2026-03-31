@@ -283,7 +283,7 @@ func (a *App) SetSubscriptionHandlersBot() {
 			return
 		}
 
-		if (isModerator || isBroadcaster) && strings.EqualFold(trimmedText, "!version") {
+		if (isModerator || isBroadcaster) && strings.EqualFold(trimmedText, "!srversion") {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
