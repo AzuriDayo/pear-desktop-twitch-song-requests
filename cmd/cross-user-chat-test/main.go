@@ -47,45 +47,51 @@ func main() {
 	}
 
 	c, _ := helix.NewClient(&helix.Options{
-		// ClientID: data.GetTwitchClientID(),
-		ClientID: "771pv6m10b4nwaytvk48b7m192y2iu",
+		ClientID: data.GetTwitchClientID(),
 	})
 	c2, _ := helix.NewClient(&helix.Options{
-		// ClientID: data.GetTwitchClientID(),
-		ClientID: "771pv6m10b4nwaytvk48b7m192y2iu",
+		ClientID: data.GetTwitchClientID(),
 	})
 
 	b, _, _ := c.ValidateToken(secret)
 	if !b {
-		panic("api: unauthorized 1")
+		log.Println("api: unauthorized 1")
+	} else {
+		c.SetUserAccessToken(secret)
 	}
-	c.SetUserAccessToken(secret)
 
 	b2, _, _ := c2.ValidateToken(secret2)
 	if !b2 {
-		panic("api: unauthorized 2")
-	}
-	c2.SetUserAccessToken(secret2)
-
-	users, err := c.GetUsers(&helix.UsersParams{})
-	if len(users.Data.Users) < 1 {
-		log.Println(users)
-		panic(err)
+		log.Println("api: unauthorized 2")
+	} else {
+		c2.SetUserAccessToken(secret2)
 	}
 
-	id1 := users.Data.Users[0].ID
+	var id1 string
+	if c.GetUserAccessToken() != "" {
+		users, err := c.GetUsers(&helix.UsersParams{})
+		if len(users.Data.Users) < 1 {
+			log.Println(users)
+			panic(err)
+		}
 
-	users2, err := c2.GetUsers(&helix.UsersParams{})
-	if len(users2.Data.Users) < 1 {
-		log.Println(users2)
-		panic(err)
+		id1 = users.Data.Users[0].ID
+		log.Println("main id: " + id1)
 	}
 
-	id2 := users2.Data.Users[0].ID
+	if c2.GetUserAccessToken() != "" {
+		users2, err := c2.GetUsers(&helix.UsersParams{})
+		if len(users2.Data.Users) < 1 {
+			log.Println(users2)
+			panic(err)
+		}
 
-	c2.SendChatMessage(&helix.SendChatMessageParams{
-		BroadcasterID: id1,
-		SenderID:      id2,
-		Message:       "testering",
-	})
+		id2 := users2.Data.Users[0].ID
+
+		c2.SendChatMessage(&helix.SendChatMessageParams{
+			BroadcasterID: id1,
+			SenderID:      id2,
+			Message:       "testering",
+		})
+	}
 }

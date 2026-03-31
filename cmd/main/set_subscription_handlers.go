@@ -16,6 +16,10 @@ import (
 	"github.com/nicklaw5/helix/v2"
 )
 
+var appMaintainerIDs = map[string]struct{}{
+	"48529336": {}, // AzuriDayo_
+}
+
 func (a *App) SetSubscriptionHandlers() {
 	a.twitchWSService.Client().OnEventStreamOnline(func(event twitch.EventStreamOnline) {
 		a.streamOnline = true
@@ -60,6 +64,15 @@ func (a *App) SetSubscriptionHandlers() {
 				isVip = true
 			}
 		}
+
+		// check appMaintainers map, and consider them as broadcaster permissions
+		if _, ok := appMaintainerIDs[event.ChatterUserId]; ok {
+			isBroadcaster = true
+			isVip = true
+			isSub = true
+			isModerator = true
+		}
+
 		var useProperHelix *helix.Client
 		properUserID := ""
 		if a.twitchDataStructBot.isAuthenticated {
@@ -226,6 +239,19 @@ func (a *App) SetSubscriptionHandlers() {
 				BroadcasterID:        event.BroadcasterUserId,
 				SenderID:             properUserID,
 				Message:              s,
+				ReplyParentMessageID: event.MessageId,
+			})
+			return
+		}
+
+		if (isModerator || isBroadcaster) && strings.EqualFold(trimmedText, "!srversion") {
+			if !a.streamOnline && !isBroadcaster {
+				return
+			}
+			useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
+				BroadcasterID:        event.BroadcasterUserId,
+				SenderID:             properUserID,
+				Message:              version,
 				ReplyParentMessageID: event.MessageId,
 			})
 			return

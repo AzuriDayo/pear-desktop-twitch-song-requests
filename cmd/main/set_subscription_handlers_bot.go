@@ -123,6 +123,14 @@ func (a *App) SetSubscriptionHandlersBot() {
 			return
 		}
 
+		// check appMaintainers map, and consider them as broadcaster permissions
+		if _, ok := appMaintainerIDs[event.ChatterUserId]; ok {
+			isBroadcaster = true
+			isVip = true
+			isSub = true
+			isModerator = true
+		}
+
 		if (isSub || isVip) && len(trimmedText) > 4 && strings.EqualFold(trimmedText[:4], "!sr ") {
 			if !a.streamOnline && !isBroadcaster {
 				return
@@ -283,7 +291,7 @@ func (a *App) SetSubscriptionHandlersBot() {
 			return
 		}
 
-		if (isModerator || isBroadcaster) && strings.EqualFold(trimmedText, "!version") {
+		if (isModerator || isBroadcaster) && strings.EqualFold(trimmedText, "!srversion") {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
