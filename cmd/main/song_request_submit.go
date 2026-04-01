@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -14,10 +15,18 @@ import (
 
 func (a *App) songRequestSubmit(useProperHelix *helix.Client, properUserID string, event twitch.EventChannelChatMessage) {
 	s, isNativeVideoID := songrequests.ParseSearchQuery(event.Message.Text)
-	song, err := songrequests.SearchSong(strings.TrimPrefix(s, "-"), 60, 600)
+	minTimeS := 30
+	maxTimeS := 600
+	song, err := songrequests.SearchSong(strings.TrimPrefix(s, "-"), minTimeS, maxTimeS)
 	if err != nil {
 		log.Println("Searching for song failed: "+event.Message.Text+"\n", err)
 		emsg := "Failed to search for your song"
+		switch err {
+		case songrequests.ErrNoResults:
+			emsg = "Error: no songs found"
+		case songrequests.ErrSongLength:
+			emsg = fmt.Sprintf("Error: the song must be between %ds and %ds", minTimeS, maxTimeS)
+		}
 		useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
 			BroadcasterID:        event.BroadcasterUserId,
 			SenderID:             properUserID,
