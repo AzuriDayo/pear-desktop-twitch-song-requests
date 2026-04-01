@@ -167,6 +167,9 @@ const (
 	MUSIC_PAGE_TYPE_ARTIST       = "MUSIC_PAGE_TYPE_ARTIST"
 )
 
+var ErrSongLength = errors.New("search songs: song duration exceeds max allowed")
+var ErrNoResults = errors.New("search songs: no results")
+
 // make sure to sanitize url for music.youtube.com / youtu.be / youtube.com/watch?v=
 func SearchSong(query string, minLength int, maxLength int) (*SongResult, error) {
 	inBody := echo.Map{
@@ -395,12 +398,12 @@ func SearchSong(query string, minLength int, maxLength int) (*SongResult, error)
 		// err usually means its safe
 		isValid := validateTime(selectedSong.RawTimeData, minLength, maxLength)
 		if !isValid {
-			return nil, errors.New("search songs: song duration exceeds max allowed")
+			return nil, ErrSongLength
 		}
 		return selectedSong, nil
 	}
 
-	return nil, errors.New("search songs: no results")
+	return nil, ErrNoResults
 }
 
 func validateTime(s string, min, max int) bool {
