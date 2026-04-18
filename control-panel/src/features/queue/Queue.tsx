@@ -61,7 +61,9 @@ export default () => {
 												<Avatar alt={`${title} - ${artist}`} src={imageUrl} />
 											</ListItemAvatar>
 											<ListItemText
-												primary={requested_by + (is_ninja ? " 🥷" : "")}
+												primary={
+													`#${i + 1} ` + requested_by + (is_ninja ? " 🥷" : "")
+												}
 												secondary={
 													<a
 														href={`https://youtu.be/${videoId}`}
