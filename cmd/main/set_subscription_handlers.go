@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 	"log"
@@ -10,9 +11,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/helpers"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/songrequests"
 	"github.com/joeyak/go-twitch-eventsub/v3"
-	"github.com/labstack/echo/v4"
 	"github.com/nicklaw5/helix/v2"
 )
 
@@ -24,7 +25,7 @@ func (a *App) SetSubscriptionHandlers() {
 	a.twitchWSService.Client().OnEventStreamOnline(func(event twitch.EventStreamOnline) {
 		a.streamOnline = true
 
-		j, _ := json.Marshal(echo.Map{
+		j, _ := json.Marshal(map[string]any{
 			"stream_online": true,
 		})
 		a.clientsBroadcast <- string(j)
@@ -32,7 +33,7 @@ func (a *App) SetSubscriptionHandlers() {
 	})
 	a.twitchWSService.Client().OnEventStreamOffline(func(event twitch.EventStreamOffline) {
 		a.streamOnline = false
-		j, _ := json.Marshal(echo.Map{
+		j, _ := json.Marshal(map[string]any{
 			"stream_online": false,
 		})
 		a.clientsBroadcast <- string(j)
@@ -254,6 +255,113 @@ func (a *App) SetSubscriptionHandlers() {
 				Message:              version,
 				ReplyParentMessageID: event.MessageId,
 			})
+			return
+		}
+
+		if strings.HasPrefix(trimmedText, "!delsong") {
+			if !a.streamOnline && !isBroadcaster {
+				return
+			}
+			// validate args
+			args := strings.Split(trimmedText, " ")
+			if len(args) != 2 {
+				useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
+					BroadcasterID:        event.BroadcasterUserId,
+					SenderID:             properUserID,
+					Message:              "Usage error, must be !delsong #",
+					ReplyParentMessageID: event.MessageId,
+				})
+				return
+			}
+			idxStr := args[1]
+			idx, err := strconv.Atoi(idxStr)
+			idx-- // arg number starts at 1
+			if err != nil || idx < 0 {
+				useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
+					BroadcasterID:        event.BroadcasterUserId,
+					SenderID:             properUserID,
+					Message:              "Usage error, !delsong # is not a positive number",
+					ReplyParentMessageID: event.MessageId,
+				})
+				return
+			}
+
+			songQueueMutex.RLock()
+			defer songQueueMutex.RUnlock()
+
+			// validate if chatter is the one who requested the song in queue before delete
+			// or validate if permissions >= mod
+			if idx >= len(songQueue) {
+				useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
+					BroadcasterID:        event.BroadcasterUserId,
+					SenderID:             properUserID,
+					Message:              "Usage error, !delsong # invalid number",
+					ReplyParentMessageID: event.MessageId,
+				})
+				return
+			}
+			song := songQueue[idx]
+			if !(song.RequestedByUserID == event.ChatterUserId || isModerator || isBroadcaster) {
+				// cannot delete song
+				useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
+					BroadcasterID:        event.BroadcasterUserId,
+					SenderID:             properUserID,
+					Message:              "Nice try, but you can't delete other chatter's songs!",
+					ReplyParentMessageID: event.MessageId,
+				})
+				return
+			}
+
+			// commit to delete song
+			songQueue = append(songQueue[:idx], songQueue[idx+1:]...)
+			hasCleanupError := false
+
+			// find song to remove from queue if it is the next one
+			if idx == 0 {
+				// validate if song was really added
+				intervalDelay := time.Second
+				maxRetries := 3
+				pearIndex := -1
+				found := false
+				for range maxRetries {
+					time.Sleep(intervalDelay)
+					found2, videoData := helpers.FindAllVideoIDCounterparts(song.Song.VideoID)
+					found = found2
+					pearIndex = videoData[song.Song.VideoID].Index
+					break
+				}
+				if found {
+					req, _ := http.NewRequest(http.MethodDelete, "http://"+songrequests.GetPearDesktopHost()+"/api/v1/queue/"+strconv.Itoa(pearIndex), nil)
+					req.Header.Set("Content-Type", "application/json")
+					resp, err := http.DefaultClient.Do(req)
+					if err != nil || resp.StatusCode != http.StatusNoContent {
+						log.Println("!delsong cleanup: Failed to delete song from pear-desktop, proceeding anyway...")
+					}
+				}
+				if len(songQueue) > 0 {
+					b := map[string]any{
+						"videoId":        songQueue[0].Song.VideoID,
+						"insertPosition": "INSERT_AFTER_CURRENT_VIDEO",
+					}
+					bb, _ := json.Marshal(b)
+					resp, err := http.Post("http://"+songrequests.GetPearDesktopHost()+"/api/v1/queue", "application/json", bytes.NewBuffer(bb))
+					if err != nil || resp.StatusCode != http.StatusNoContent {
+						log.Println("!delsong cleanup: Failed to add next song in queue to pear-desktop, make sure you add it next in queue yourself. https://youtu.be/" + songQueue[0].Song.VideoID)
+						hasCleanupError = true
+					}
+				}
+			}
+			msg := "Removed song: " + song.Song.Title + " - " + song.Song.Artist + " " + "https://youtu.be/" + song.Song.VideoID
+			if hasCleanupError {
+				msg += " but failed to cleanup properly. @" + event.BroadcasterUserLogin + " Please add http://youtu.be/" + songQueue[0].Song.VideoID + " yourself next in queue, Sorry!"
+			}
+			useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
+				BroadcasterID:        event.BroadcasterUserId,
+				SenderID:             properUserID,
+				Message:              msg,
+				ReplyParentMessageID: event.MessageId,
+			})
+
 			return
 		}
 	})

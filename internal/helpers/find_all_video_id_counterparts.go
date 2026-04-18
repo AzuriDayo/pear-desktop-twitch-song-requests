@@ -8,7 +8,11 @@ import (
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/songrequests"
 )
 
-func FindAllVideoIDCounterparts(videoID string) (bool, map[string]struct{}) {
+type FoundVideoData struct {
+	Index int
+}
+
+func FindAllVideoIDCounterparts(videoID string) (bool, map[string]FoundVideoData) {
 	// get queue
 	queue := songrequests.QueueResponse{}
 	resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/queue")
@@ -23,17 +27,17 @@ func FindAllVideoIDCounterparts(videoID string) (bool, map[string]struct{}) {
 				// get all video ids and counterparts
 				for i := len(queue.Items) - 1; i >= 0; i-- {
 					v := queue.Items[i]
-					compareVideoIDs := map[string]struct{}{}
+					compareVideoIDs := map[string]FoundVideoData{}
 					// all counterparts
 					if v.PlaylistPanelVideoWrapperRenderer != nil {
-						compareVideoIDs[v.PlaylistPanelVideoWrapperRenderer.PrimaryRenderer.PlaylistPanelVideoRenderer.VideoId] = struct{}{}
+						compareVideoIDs[v.PlaylistPanelVideoWrapperRenderer.PrimaryRenderer.PlaylistPanelVideoRenderer.VideoId] = FoundVideoData{}
 						for _, v2 := range v.PlaylistPanelVideoWrapperRenderer.Counterpart {
-							compareVideoIDs[v2.CounterpartRenderer.PlaylistPanelVideoRenderer.VideoId] = struct{}{}
+							compareVideoIDs[v2.CounterpartRenderer.PlaylistPanelVideoRenderer.VideoId] = FoundVideoData{}
 						}
 					}
 					// native videoid
 					if v.PlaylistPanelVideoRenderer != nil {
-						compareVideoIDs[v.PlaylistPanelVideoRenderer.VideoId] = struct{}{}
+						compareVideoIDs[v.PlaylistPanelVideoRenderer.VideoId] = FoundVideoData{ Index: i }
 					}
 
 					// compare newVideoId and compareVideoIds and queueHead set in isQueueHeadPlayingNow
