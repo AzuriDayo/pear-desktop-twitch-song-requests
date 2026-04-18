@@ -14,7 +14,6 @@ import (
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/helpers"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/songrequests"
 	"github.com/joeyak/go-twitch-eventsub/v3"
-	"github.com/labstack/echo/v4"
 	"github.com/nicklaw5/helix/v2"
 )
 
@@ -388,7 +387,7 @@ func (a *App) SetSubscriptionHandlersBot() {
 					}
 				}
 				if len(songQueue) > 0 {
-					b := echo.Map{
+					b := map[string]any{
 						"videoId":        songQueue[0].Song.VideoID,
 						"insertPosition": "INSERT_AFTER_CURRENT_VIDEO",
 					}
