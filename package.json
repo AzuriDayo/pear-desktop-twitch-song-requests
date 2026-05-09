@@ -7,7 +7,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/bun": "^1.3.11",
+    "@types/node": "^25.6.2",
     "eslint": "^10.1.0",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
@@ -23,7 +23,5 @@
   "license": "MIT",
   "productName": "pear-desktop-twitch-song-requests",
   "scripts": {},
-  "workspaces": [
-    "control-panel"
-  ]
+  "packageManager": "pnpm@11.0.9+sha512.34ce82e6780233cf9cad8685029a8f81d2e06196c5a9bad98879f7424940c6817c4e4524fb7d38b8553ceed48b9758b8ebaf1abd3600c232c4c8cf7366086f38"
 }
