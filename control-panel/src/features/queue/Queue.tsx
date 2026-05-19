@@ -1,4 +1,6 @@
-import { useAppSelector } from "../../app/hooks";
+import { useState } from "react";
+import { useAppDispatch, useAppSelector } from "../../app/hooks";
+import { removeSongAtIndex } from "../twitchws/songQueueSlice";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemAvatar from "@mui/material/ListItemAvatar";
@@ -6,12 +8,37 @@ import Avatar from "@mui/material/Avatar";
 import Divider from "@mui/material/Divider";
 import ListItemText from "@mui/material/ListItemText";
 import Typography from "@mui/material/Typography";
+import IconButton from "@mui/material/IconButton";
+import DeleteIcon from "@mui/icons-material/Delete";
 
 export default () => {
 	const { song_queue, isLoaded } = useAppSelector(
 		(state) => state.songQueueState,
 	);
 	const playerState = useAppSelector((state) => state.musicPlayerState);
+	const dispatch = useAppDispatch();
+
+	const [deletingIdx, setDeletingIdx] = useState<number | null>(null);
+
+	const handleDelete = async (i: number) => {
+		if (deletingIdx !== null) return;
+		setDeletingIdx(i);
+		try {
+			// API uses 1-based index, matching !delsong # semantics
+			const res = await fetch(`/api/v1/queue/${i + 1}`, {
+				method: "DELETE",
+			});
+			if (res.ok) {
+				dispatch(removeSongAtIndex({ index: i }));
+			} else {
+				console.error("Failed to delete song from queue:", res.status);
+			}
+		} catch (err) {
+			console.error("Error deleting song from queue:", err);
+		} finally {
+			setDeletingIdx(null);
+		}
+	};
 
 	return (
 		<div>
@@ -56,7 +83,19 @@ export default () => {
 							) => {
 								return (
 									<>
-										<ListItem alignItems="flex-start">
+										<ListItem
+											alignItems="flex-start"
+											secondaryAction={
+												<IconButton
+													edge="end"
+													aria-label={`Remove ${title} from queue`}
+													onClick={() => handleDelete(i)}
+													disabled={deletingIdx !== null}
+												>
+													<DeleteIcon fontSize="small" />
+												</IconButton>
+											}
+										>
 											<ListItemAvatar>
 												<Avatar alt={`${title} - ${artist}`} src={imageUrl} />
 											</ListItemAvatar>

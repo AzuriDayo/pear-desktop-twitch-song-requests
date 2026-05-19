@@ -219,6 +219,7 @@ func (a *App) Run() error {
 	apiV1.POST("/twitch-oauth", a.handleApiV1TwitchOAuthPOST)
 	apiV1.PATCH("/settings", a.handleApiV1SettingsPATCH)
 	apiV1.GET("/ws", a.handleApiV1WsGET)
+	apiV1.DELETE("/queue/:idx", a.handleApiV1QueueDeleteDELETE)
 	apiV1Requesters := apiV1.Group("/requesters")
 	apiV1Requesters.GET("/history", a.handleApiV1RequestersHistoryGET)
 	apiV1Twitch := apiV1.Group("/twitch")

@@ -40,10 +40,14 @@ export const songQueueSlice = createSlice({
 		shiftQueue: (state) => {
 			state.song_queue.shift();
 		},
+		removeSongAtIndex: (state, action: PayloadAction<{ index: number }>) => {
+			state.song_queue.splice(action.payload.index, 1);
+		},
 	},
 });
 
-export const { setQueueInfo, addSong, shiftQueue } = songQueueSlice.actions;
+export const { setQueueInfo, addSong, shiftQueue, removeSongAtIndex } =
+	songQueueSlice.actions;
 
 export const selectQueueState = (state: RootState) => state.songQueueState;
 
