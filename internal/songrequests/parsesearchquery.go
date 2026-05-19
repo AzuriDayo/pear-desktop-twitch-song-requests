@@ -6,7 +6,9 @@ import (
 )
 
 func ParseSearchQuery(s string) (string, bool) {
-	s = strings.TrimPrefix(s, "!sr ")
+	if len(s) >= 4 && strings.ToLower(s[:4]) == "!sr " {
+		s = s[4:]
+	}
 	url, err := url.Parse(s)
 	if err != nil {
 		return s, false
