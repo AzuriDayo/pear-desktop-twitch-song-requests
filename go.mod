@@ -10,7 +10,7 @@ require (
 	github.com/joeyak/go-twitch-eventsub/v3 v3.0.1
 	github.com/labstack/echo/v4 v4.15.1
 	github.com/lxi1400/GoTitle v0.0.0-20210314075355-9d4645c96c0e
-	github.com/nicklaw5/helix/v2 v2.32.0
+	github.com/nicklaw5/helix/v2 v2.34.0
 	github.com/recws-org/recws v1.4.0
 	github.com/valyala/fastjson v1.6.10
 	golang.org/x/mod v0.35.0
