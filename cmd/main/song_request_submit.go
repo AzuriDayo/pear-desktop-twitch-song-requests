@@ -37,7 +37,7 @@ func (a *App) songRequestSubmit(useProperHelix *helix.Client, properUserID strin
 	}
 
 	requestedStringIsSameVideoID := true
-	if isNativeVideoID && song.VideoID != s {
+	if isNativeVideoID && !strings.Contains(s, song.VideoID) {
 		song.VideoID = s
 		song.Artist = "unknown"
 		song.ImageUrl = ""
