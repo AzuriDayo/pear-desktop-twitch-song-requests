@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { removeSongAtIndex } from "../twitchws/songQueueSlice";
 import List from "@mui/material/List";
@@ -82,7 +82,7 @@ const Queue = () => {
 								i,
 							) => {
 								return (
-									<>
+									<React.Fragment key={videoId}>
 										<ListItem
 											alignItems="flex-start"
 											secondaryAction={
@@ -123,7 +123,7 @@ const Queue = () => {
 										{i !== song_queue.length - 1 && (
 											<Divider variant="inset" component="li" />
 										)}
-									</>
+									</React.Fragment>
 								);
 							},
 						)}

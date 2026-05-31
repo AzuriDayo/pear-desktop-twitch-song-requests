@@ -49,7 +49,7 @@ export function ProcessTwitchOAuth() {
 						token_type: string;
 					} = {
 						access_token: hashParams.get("access_token") ?? "",
-						scope: hashParams.get("access_token") ?? "",
+						scope: hashParams.get("scope") ?? "",
 						token_type: hashParams.get("token_type") ?? "",
 					};
 					if (hashParams.has("state")) {

@@ -17,6 +17,65 @@ interface IRequesterData {
 	image_url: string;
 }
 
+const columns: GridColDef<IRequesterData>[] = [
+	{
+		headerName: "Requester",
+		field: "twitch_username",
+		sortable: false,
+		filterable: false,
+		hideable: false,
+		disableColumnMenu: true,
+		width: 150,
+		renderCell: (params: GridRenderCellParams<IRequesterData>) => (
+			<span>{params.value + (params.row.is_ninja ? " 🥷" : "")}</span>
+		),
+	},
+	{
+		headerName: "Requested Song",
+		field: "song_title",
+		minWidth: 500,
+		sortable: false,
+		filterable: false,
+		hideable: false,
+		disableColumnMenu: true,
+		renderCell: (params: GridRenderCellParams<IRequesterData>) => (
+			<div style={{ display: "flex", flexDirection: "row" }}>
+				<div>
+					<a href={`https://youtu.be/${params.row.video_id}`} target="_blank">
+						<img
+							style={{
+								height: "50px",
+								width: "50px",
+								overflow: "hidden",
+								objectFit: "cover",
+							}}
+							src={params.row.image_url}
+							alt={params.row.song_title + " - " + params.row.artist_name}
+						/>
+					</a>
+				</div>
+				<div>
+					<a href={`https://youtu.be/${params.row.video_id}`} target="_blank">
+						{params.row.song_title + " - " + params.row.artist_name}
+					</a>
+				</div>
+			</div>
+		),
+	},
+	{
+		field: "requested_at",
+		headerName: "Requested At",
+		minWidth: 250,
+		sortable: false,
+		filterable: false,
+		hideable: false,
+		disableColumnMenu: true,
+		renderCell: (params: GridRenderCellParams<IRequesterData>) => (
+			<span>{new Date(params.value).toLocaleString()}</span>
+		),
+	},
+];
+
 const History = () => {
 	const [paginationModel, setPaginationModel] = useState({
 		page: 0, // page index is 0-based
@@ -29,14 +88,18 @@ const History = () => {
 	const fetchDataFromServer = useCallback(
 		async (page: number, pageSize: number) => {
 			setLoading(true);
-			// Replace this with your actual API call (e.g., using axios or fetch)
-			const response = await fetch(
-				`/api/v1/requesters/history?page=${page}&perPage=${pageSize}`,
-			);
-			const data = await response.json();
-			setRows(data.items); // The data for the current page
-			setRowCount(data.max_results); // The total count of all data
-			setLoading(false);
+			try {
+				const response = await fetch(
+					`/api/v1/requesters/history?page=${page}&perPage=${pageSize}`,
+				);
+				const data = await response.json();
+				setRows(data.items);
+				setRowCount(data.max_results);
+			} catch (e) {
+				console.error("Failed to load history", e);
+			} finally {
+				setLoading(false);
+			}
 		},
 		[],
 	);
@@ -48,73 +111,6 @@ const History = () => {
 			await fetchDataFromServer(page, pageSize);
 		})();
 	}, [paginationModel, fetchDataFromServer]); // Re-fetch data whenever pagination model changes
-
-	const columns = [
-		{
-			headerName: "Requester",
-			field: "twitch_username",
-			sortable: false,
-			filterable: false,
-			hideable: false,
-			disableColumnMenu: true,
-			width: 150,
-			renderCell: (params: GridRenderCellParams<IRequesterData>) => (
-				<span>{params.value + (params.row.is_ninja ? " 🥷" : "")}</span>
-			),
-		},
-		{
-			headerName: "Requested Song",
-			field: "song_title",
-			minWidth: 500,
-			sortable: false,
-			filterable: false,
-			hideable: false,
-			disableColumnMenu: true,
-			renderCell: (params: GridRenderCellParams<IRequesterData>) => {
-				return (
-					<div style={{ display: "flex", flexDirection: "row" }}>
-						<div>
-							<a
-								href={`https://youtu.be/${params.row.video_id}`}
-								target="_blank"
-							>
-								<img
-									style={{
-										height: "50px",
-										width: "50px",
-										overflow: "hidden",
-										objectFit: "cover",
-									}}
-									src={params.row.image_url}
-									alt={params.row.song_title + " - " + params.row.artist_name}
-								/>
-							</a>
-						</div>
-						<div>
-							<a
-								href={`https://youtu.be/${params.row.video_id}`}
-								target="_blank"
-							>
-								{params.row.song_title + " - " + params.row.artist_name}
-							</a>
-						</div>
-					</div>
-				);
-			},
-		},
-		{
-			field: "requested_at",
-			headerName: "Requested At",
-			minWidth: 250,
-			sortable: false,
-			filterable: false,
-			hideable: false,
-			disableColumnMenu: true,
-			renderCell: (params: GridRenderCellParams<IRequesterData>) => (
-				<span>{new Date(params.value).toLocaleString()}</span>
-			),
-		},
-	] as GridColDef<IRequesterData>[];
 
 	return (
 		<div>

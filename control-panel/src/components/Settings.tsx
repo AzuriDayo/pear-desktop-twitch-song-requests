@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import { useAppSelector } from "../app/hooks";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 const urlPath = "/api/v1/settings";
 const method = "PATCH";
@@ -22,11 +22,30 @@ export function Settings() {
 		{ id: string; cost: number; name: string }[]
 	>([]);
 
+	const fetchRewards = useCallback(async () => {
+		setIsRefreshing(true);
+		setStatus("");
+		try {
+			const r = await fetch("/api/v1/twitch/custom-rewards");
+			setAvailableRewards(await r.json());
+		} catch {
+			setStatus("Failed to refresh, try again later");
+		} finally {
+			setIsRefreshing(false);
+		}
+	}, []);
+
 	useEffect(() => {
 		(async () => {
-			const r = await fetch("/api/v1/twitch/custom-rewards");
-			const rews = await r.json();
-			setAvailableRewards(rews);
+			setIsRefreshing(true);
+			try {
+				const r = await fetch("/api/v1/twitch/custom-rewards");
+				setAvailableRewards(await r.json());
+			} catch {
+				// silently ignore initial load failures
+			} finally {
+				setIsRefreshing(false);
+			}
 		})();
 	}, []);
 
@@ -108,8 +127,8 @@ export function Settings() {
 						<option key="0" value={""}>
 							Select reward...
 						</option>
-						{availableRewards.map((r, i) => (
-							<option key={i + 1} value={r.id}>
+						{availableRewards.map((r) => (
+							<option key={r.id} value={r.id}>
 								{r.name} - {r.cost}
 							</option>
 						))}
@@ -117,19 +136,8 @@ export function Settings() {
 					<button
 						disabled={!twitchState.isLoaded || isRefreshing}
 						onClick={() => {
-							(async () => {
-								setIsRefreshing(true);
-								setStatus("");
-								try {
-									const r = await fetch("/api/v1/twitch/custom-rewards");
-									const rews = await r.json();
-									setAvailableRewards(rews);
-									setStatus("Done refresh");
-								} catch {
-									setStatus("Failed refresh try again later");
-								}
-								setIsRefreshing(false);
-							})();
+							setStatus("");
+							fetchRewards().then(() => setStatus("Done refresh"));
 						}}
 					>
 						Refresh
