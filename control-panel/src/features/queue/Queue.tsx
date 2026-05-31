@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
 import { removeSongAtIndex } from "../twitchws/songQueueSlice";
 import List from "@mui/material/List";
@@ -11,7 +11,7 @@ import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
 import DeleteIcon from "@mui/icons-material/Delete";
 
-export default () => {
+const Queue = () => {
 	const { song_queue, isLoaded } = useAppSelector(
 		(state) => state.songQueueState,
 	);
@@ -82,7 +82,7 @@ export default () => {
 								i,
 							) => {
 								return (
-									<>
+									<React.Fragment key={videoId}>
 										<ListItem
 											alignItems="flex-start"
 											secondaryAction={
@@ -123,7 +123,7 @@ export default () => {
 										{i !== song_queue.length - 1 && (
 											<Divider variant="inset" component="li" />
 										)}
-									</>
+									</React.Fragment>
 								);
 							},
 						)}
@@ -137,3 +137,5 @@ export default () => {
 		</div>
 	);
 };
+
+export default Queue;

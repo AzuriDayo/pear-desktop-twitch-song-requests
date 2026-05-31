@@ -53,14 +53,22 @@ func (a *App) handleApiV1SettingsPATCH(c echo.Context) error {
 		}
 	}
 
+	expiryDate := ""
+	if a.twitchDataStruct.isAuthenticated {
+		expiryDate = a.twitchDataStruct.expiresDate.Local().Format(data.TWITCH_SERVER_DATE_LAYOUT)
+	}
+	expiryDateBot := ""
+	if a.twitchDataStructBot.isAuthenticated {
+		expiryDateBot = a.twitchDataStructBot.expiresDate.Local().Format(data.TWITCH_SERVER_DATE_LAYOUT)
+	}
 	b := echo.Map{
 		"type":            "TWITCH_INFO",
 		"stream_online":   a.streamOnline,
 		"reward_id":       a.songRequestRewardID,
 		"login":           a.twitchDataStruct.login,
 		"login_bot":       a.twitchDataStructBot.login,
-		"expiry_date":     a.twitchDataStruct.expiresDate.Local().Format(data.TWITCH_SERVER_DATE_LAYOUT),
-		"expiry_date_bot": a.twitchDataStructBot.expiresDate.Local().Format(data.TWITCH_SERVER_DATE_LAYOUT),
+		"expiry_date":     expiryDate,
+		"expiry_date_bot": expiryDateBot,
 	}
 	bb, _ := json.Marshal(b)
 	a.clientsBroadcast <- string(bb)

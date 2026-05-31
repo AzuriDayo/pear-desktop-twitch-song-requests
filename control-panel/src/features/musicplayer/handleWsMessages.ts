@@ -51,7 +51,7 @@ export interface SongInfo {
 	views: number;
 	uploadDate?: string;
 	imageSrc?: string | null;
-	image?: any | null;
+	image?: unknown | null;
 	isPaused?: boolean;
 	songDuration: number;
 	elapsedSeconds?: number;
@@ -63,15 +63,12 @@ export interface SongInfo {
 	tags?: string[];
 }
 
-const EMediaType = {
-	Audio: "AUDIO",
-	OriginalMusicVideo: "ORIGINAL_MUSIC_VIDEO",
-	UserGeneratedContent: "USER_GENERATED_CONTENT",
-	PodcastEpisode: "PODCAST_EPISODE",
-	OtherVideo: "OTHER_VIDEO",
-} as const;
-
-type MediaType = (typeof EMediaType)[keyof typeof EMediaType];
+type MediaType =
+	| "AUDIO"
+	| "ORIGINAL_MUSIC_VIDEO"
+	| "USER_GENERATED_CONTENT"
+	| "PODCAST_EPISODE"
+	| "OTHER_VIDEO";
 
 export const handleWsMessages = (
 	data: string,
@@ -139,7 +136,7 @@ export const handleWsMessages = (
 			default:
 				console.log(msgData);
 		}
-	} catch (e) {
+	} catch {
 		console.log(data);
 	}
 };

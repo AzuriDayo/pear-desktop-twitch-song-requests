@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import { useAppSelector } from "./app/hooks";
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { isAfter, addDays } from "date-fns";
 
 const expiryState = {
@@ -23,48 +23,33 @@ const getExpiryStateEmoji = (state: EExpiryState): string => {
 type EExpiryState = (typeof expiryState)[keyof typeof expiryState];
 // type TExpiryState = keyof typeof expiryState;
 
+function computeExpiryState(expiresIn: string): EExpiryState {
+	if (expiresIn === "") return expiryState.OK;
+	let expiry: Date;
+	try {
+		expiry = new Date(expiresIn);
+	} catch {
+		return expiryState.OK;
+	}
+	const now = new Date();
+	if (isAfter(now, expiry)) return expiryState.EXPIRED;
+	if (isAfter(addDays(now, 15), expiry)) return expiryState.SOON;
+	return expiryState.OK;
+}
+
 export function Home() {
 	const twitchState = useAppSelector((state) => state.twitchState);
-	const [userExpiryState, setUserExpiryState] = useState<EExpiryState>(
-		expiryState.OK,
+
+	const userExpiryState = useMemo(
+		() => computeExpiryState(twitchState.expires_in),
+		[twitchState.expires_in],
 	);
-	const [botExpiryState, setBotExpiryState] = useState<EExpiryState>(
-		expiryState.OK,
+
+	const botExpiryState = useMemo(
+		() => computeExpiryState(twitchState.expires_in_bot),
+		[twitchState.expires_in_bot],
 	);
-	useEffect(() => {
-		if (twitchState.expires_in === "") {
-			return;
-		}
 
-		const now = new Date();
-		let expiry: Date;
-		try {
-			expiry = new Date(twitchState.expires_in);
-		} catch (e) {
-			return;
-		}
-
-		if (isAfter(now, expiry)) {
-			setUserExpiryState(expiryState.EXPIRED);
-		} else if (isAfter(addDays(now, 15), expiry)) {
-			setUserExpiryState(expiryState.SOON);
-		}
-
-		if (twitchState.expires_in_bot === "") {
-			return;
-		}
-		try {
-			expiry = new Date(twitchState.expires_in_bot);
-		} catch (e) {
-			return;
-		}
-
-		if (isAfter(now, expiry)) {
-			setBotExpiryState(expiryState.EXPIRED);
-		} else if (isAfter(addDays(now, 15), expiry)) {
-			setBotExpiryState(expiryState.SOON);
-		}
-	}, [twitchState]);
 	return twitchState.isLoaded ? (
 		<div>
 			<Link to="/queue">View song queue and history</Link>
