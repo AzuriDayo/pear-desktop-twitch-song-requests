@@ -48,7 +48,7 @@ func (a *App) SetSubscriptionHandlers() {
 		trimmedText = strings.Trim(event.Message.Text, " ͏") // idk why twitch adds this character
 
 		for _, v := range event.Badges {
-			if v.SetId == "subscriber" {
+			if v.SetId == "subscriber" || v.SetId == "founder" {
 				isSub = true
 			}
 			if v.SetId == "broadcaster" {
