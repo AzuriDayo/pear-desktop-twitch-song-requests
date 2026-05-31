@@ -56,7 +56,7 @@ func (a *App) SetSubscriptionHandlers() {
 				isModerator = true
 				isSub = true
 			}
-			if v.SetId == "moderator" {
+			if v.SetId == "moderator" || v.SetId == "lead_moderator" {
 				isModerator = true
 				isSub = true
 			}
