@@ -6,6 +6,8 @@ import (
 )
 
 func ParseSearchQuery(s string) (string, bool) {
+	s = strings.ReplaceAll(s, " ͏", "") // ok wtf twitch
+	s = strings.TrimSpace(s)
 	if len(s) >= 4 && strings.ToLower(s[:4]) == "!sr " {
 		s = s[4:]
 	}
@@ -13,7 +15,7 @@ func ParseSearchQuery(s string) (string, bool) {
 	if err != nil {
 		return s, false
 	}
-	if url.Host == "www.youtube.com" || url.Host == "music.youtube.com" {
+	if url.Host == "www.youtube.com" || url.Host == "music.youtube.com" || url.Host == "youtube.com" || url.Host == "m.youtube.com" {
 		urlpath := strings.TrimPrefix(url.Path, "/")
 		if urlpath == "watch" {
 			vid := url.Query().Get("v")
