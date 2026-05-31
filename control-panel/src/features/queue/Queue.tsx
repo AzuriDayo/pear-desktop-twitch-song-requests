@@ -11,7 +11,7 @@ import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
 import DeleteIcon from "@mui/icons-material/Delete";
 
-export default () => {
+const Queue = () => {
 	const { song_queue, isLoaded } = useAppSelector(
 		(state) => state.songQueueState,
 	);
@@ -137,3 +137,5 @@ export default () => {
 		</div>
 	);
 };
+
+export default Queue;

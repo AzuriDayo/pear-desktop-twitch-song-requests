@@ -7,10 +7,15 @@ const method = "PATCH";
 
 export function Settings() {
 	const twitchState = useAppSelector((state) => state.twitchState);
-	const [twitchRewardId, setTwitchRewardId] = useState<{
-		value: string | null;
-		loaded: boolean;
-	}>({ value: "", loaded: false });
+
+	// Track the user's in-progress selection separately from the persisted value.
+	// When null, the current persisted value from Redux is used (no useEffect needed).
+	const [selectedRewardId, setSelectedRewardId] = useState<string | null>(null);
+	const rewardId =
+		selectedRewardId ??
+		(twitchState.isLoaded ? twitchState.twitch_song_request_reward_id : "");
+
+	const [isRefreshing, setIsRefreshing] = useState(false);
 	const [settings, setSettings] = useState<{ [key: string]: string }>({});
 	const [status, setStatus] = useState("");
 	const [availableRewards, setAvailableRewards] = useState<
@@ -24,17 +29,6 @@ export function Settings() {
 			setAvailableRewards(rews);
 		})();
 	}, []);
-
-	useEffect(() => {
-		if (!twitchRewardId.loaded && twitchState.isLoaded) {
-			const v = {
-				value: twitchState.twitch_song_request_reward_id,
-				loaded: true,
-			};
-			console.log(v);
-			setTwitchRewardId(v);
-		}
-	}, [twitchState]);
 
 	useEffect(() => {
 		if (Object.keys(settings).length > 0) {
@@ -52,12 +46,9 @@ export function Settings() {
 				})
 				.then((text) => {
 					if (text == "") return;
-					let msg = {
-						["error"]: "",
-					};
 					try {
 						if (text != "") {
-							msg = JSON.parse(text);
+							const msg: { error?: string } = JSON.parse(text);
 							setStatus(
 								"Settings save failed with error: " + (msg.error ?? ""),
 							);
@@ -91,7 +82,7 @@ export function Settings() {
 				onSubmit={(e) => {
 					e.preventDefault();
 					setSettings({
-						twitch_song_request_reward_id: twitchRewardId.value ?? "",
+						twitch_song_request_reward_id: rewardId ?? "",
 					});
 				}}
 			>
@@ -107,13 +98,12 @@ export function Settings() {
 				>
 					<select
 						id="reward-id"
-						disabled={!twitchRewardId.loaded}
+						disabled={!twitchState.isLoaded || isRefreshing}
 						style={{ minWidth: "50vw", minHeight: "4vh" }}
 						onChange={(e) => {
-							const v = e.target.value;
-							setTwitchRewardId({ value: v, loaded: true });
+							setSelectedRewardId(e.target.value);
 						}}
-						value={twitchRewardId.value ?? ""}
+						value={rewardId ?? ""}
 					>
 						<option key="0" value={""}>
 							Select reward...
@@ -125,25 +115,20 @@ export function Settings() {
 						))}
 					</select>
 					<button
-						disabled={!twitchRewardId.loaded}
+						disabled={!twitchState.isLoaded || isRefreshing}
 						onClick={() => {
 							(async () => {
-								const v = {
-									value: twitchRewardId.value,
-									loaded: false,
-								};
-								setTwitchRewardId(v);
+								setIsRefreshing(true);
 								setStatus("");
 								try {
 									const r = await fetch("/api/v1/twitch/custom-rewards");
 									const rews = await r.json();
 									setAvailableRewards(rews);
 									setStatus("Done refresh");
-								} catch (e) {
+								} catch {
 									setStatus("Failed refresh try again later");
 								}
-								v.loaded = true;
-								setTwitchRewardId(v);
+								setIsRefreshing(false);
 							})();
 						}}
 					>

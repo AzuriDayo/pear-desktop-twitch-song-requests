@@ -1,18 +1,15 @@
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import "./ConnectWithTwitchEntry.css";
 
 function ConnectWithTwitchEntry(props: { forBot: boolean }) {
-	const [params, setParams] = useState<URLSearchParams>();
-
-	// on page load, set the oauth params
-	useEffect(() => {
-		const params = new URLSearchParams();
-		params.append("response_type", "token");
-		params.append(
+	const params = useMemo(() => {
+		const p = new URLSearchParams();
+		p.append("response_type", "token");
+		p.append(
 			"client_id",
 			import.meta.env.VITE_TWITCH_CLIENT_ID ?? "7k7nl6w8e0owouonj7nb9g3k5s6gs5",
 		);
-		params.append(
+		p.append(
 			"redirect_uri",
 			"http://" + window.location.host + "/oauth/twitch",
 		);
@@ -30,16 +27,16 @@ function ConnectWithTwitchEntry(props: { forBot: boolean }) {
 				"channel:read:subscriptions",
 			);
 		}
-		params.append("scope", scopes.join(" "));
+		p.append("scope", scopes.join(" "));
 		if (props.forBot) {
-			params.append("state", "bot");
+			p.append("state", "bot");
 		}
-		setParams(params);
 		/*
 			example fragment: #access_token=73d0f8mkabpbmjp921asv2jaidwxn&scope=channel%3Amanage%3Apolls+channel%3Aread%3Apolls&state=c3ab8aa609ea11e793ae92361f002671&token_type=bearer
 			example error: ?error=redirect_mismatch&error_description=Parameter+redirect_uri+does+not+match+registered+URI
 		*/
-	}, []);
+		return p;
+	}, [props.forBot]);
 
 	return (
 		<>

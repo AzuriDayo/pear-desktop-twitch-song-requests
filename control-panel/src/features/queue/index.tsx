@@ -12,7 +12,7 @@ const queueTypes = {
 
 type EQueueTypes = (typeof queueTypes)[keyof typeof queueTypes];
 
-export default () => {
+const QueuePage = () => {
 	const navigate = useNavigate();
 	const [selectedQueueType, setSelectedQueueType] = useState<EQueueTypes>(
 		queueTypes.CURRENT,
@@ -54,3 +54,5 @@ export default () => {
 		</div>
 	);
 };
+
+export default QueuePage;

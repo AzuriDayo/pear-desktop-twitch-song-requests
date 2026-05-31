@@ -1,6 +1,6 @@
 import Paper from "@mui/material/Paper";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
 	DataGrid,
 	type GridRenderCellParams,
@@ -26,21 +26,28 @@ const History = () => {
 	const [rowCount, setRowCount] = useState(0);
 	const [loading, setLoading] = useState(false);
 
-	const fetchDataFromServer = async (page: number, pageSize: number) => {
-		setLoading(true);
-		// Replace this with your actual API call (e.g., using axios or fetch)
-		const response = await fetch(
-			`/api/v1/requesters/history?page=${page}&perPage=${pageSize}`,
-		);
-		const data = await response.json();
-		setRows(data.items); // The data for the current page
-		setRowCount(data.max_results); // The total count of all data
-		setLoading(false);
-	};
+	const fetchDataFromServer = useCallback(
+		async (page: number, pageSize: number) => {
+			setLoading(true);
+			// Replace this with your actual API call (e.g., using axios or fetch)
+			const response = await fetch(
+				`/api/v1/requesters/history?page=${page}&perPage=${pageSize}`,
+			);
+			const data = await response.json();
+			setRows(data.items); // The data for the current page
+			setRowCount(data.max_results); // The total count of all data
+			setLoading(false);
+		},
+		[],
+	);
 
 	useEffect(() => {
-		fetchDataFromServer(paginationModel.page, paginationModel.pageSize);
-	}, [paginationModel]); // Re-fetch data whenever pagination model changes
+		const page = paginationModel.page;
+		const pageSize = paginationModel.pageSize;
+		(async () => {
+			await fetchDataFromServer(page, pageSize);
+		})();
+	}, [paginationModel, fetchDataFromServer]); // Re-fetch data whenever pagination model changes
 
 	const columns = [
 		{

@@ -28,9 +28,7 @@ export const twitchStateSlice = createSlice({
 	reducers: {
 		setTwitchInfo: (state, action: PayloadAction<Partial<ITwitchState>>) => {
 			state.isLoaded = true;
-			for (const [key, value] of Object.entries(action.payload)) {
-				(state as any)[key] = value as any;
-			}
+			Object.assign(state, action.payload);
 		},
 	},
 });
