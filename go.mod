@@ -1,6 +1,6 @@
 module github.com/azuridayo/pear-desktop-twitch-song-requests
 
-go 1.26.1
+go 1.26.4
 
 require (
 	github.com/ChromeTemp/Popup v1.2.0

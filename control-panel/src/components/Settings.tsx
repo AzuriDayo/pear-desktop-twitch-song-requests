@@ -12,8 +12,7 @@ export function Settings() {
 	// When null, the current persisted value from Redux is used (no useEffect needed).
 	const [selectedRewardId, setSelectedRewardId] = useState<string | null>(null);
 	const rewardId =
-		selectedRewardId ??
-		(twitchState.isLoaded ? twitchState.twitch_song_request_reward_id : "");
+		selectedRewardId ?? (twitchState.isLoaded ? twitchState.twitch_song_request_reward_id : "");
 
 	const [isRefreshing, setIsRefreshing] = useState(false);
 	const [settings, setSettings] = useState<{ [key: string]: string }>({});
@@ -36,7 +35,7 @@ export function Settings() {
 	}, []);
 
 	useEffect(() => {
-		(async () => {
+		void (async () => {
 			setIsRefreshing(true);
 			try {
 				const r = await fetch("/api/v1/twitch/custom-rewards");
@@ -51,7 +50,7 @@ export function Settings() {
 
 	useEffect(() => {
 		if (Object.keys(settings).length > 0) {
-			fetch(urlPath, {
+			void fetch(urlPath, {
 				method,
 				body: JSON.stringify(settings),
 			})
@@ -68,9 +67,7 @@ export function Settings() {
 					try {
 						if (text != "") {
 							const msg: { error?: string } = JSON.parse(text);
-							setStatus(
-								"Settings save failed with error: " + (msg.error ?? ""),
-							);
+							setStatus("Settings save failed with error: " + (msg.error ?? ""));
 						}
 					} catch (e) {
 						console.log(e);
@@ -92,10 +89,7 @@ export function Settings() {
 				</a>{" "}
 				and you must enable the toggle for <i>Require Viewer to Enter Text</i>.
 			</p>
-			<p>
-				Once you have created your Custom Reward, you can refresh the dropdown
-				below.
-			</p>
+			<p>Once you have created your Custom Reward, you can refresh the dropdown below.</p>
 			<br />
 			<form
 				onSubmit={(e) => {
@@ -137,7 +131,7 @@ export function Settings() {
 						disabled={!twitchState.isLoaded || isRefreshing}
 						onClick={() => {
 							setStatus("");
-							fetchRewards().then(() => setStatus("Done refresh"));
+							void fetchRewards().then(() => setStatus("Done refresh"));
 						}}
 					>
 						Refresh

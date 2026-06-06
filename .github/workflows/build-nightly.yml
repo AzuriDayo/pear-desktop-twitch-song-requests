@@ -3,80 +3,97 @@ name: Build nightly
 on:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-    - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
-      with:
-        go-version-file: go.mod
-    - run: |
-        mkdir -p cmd/main/build
-        touch cmd/main/build/index.html
-        go test ./...
-  build-and-publish:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: pnpm/action-setup@91ab88e2619ed1f46221f0ba42d1492c02baf788 # v6.0.6
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           go-version-file: go.mod
+      - run: |
+          mkdir -p cmd/main/build
+          touch cmd/main/build/index.html
+          go test ./...
+
+  build-web:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: voidzero-dev/setup-vp@2dec1e33f4ab2c6d5bce1b0c4607961bb1a3f7a1 # v1.1.2
+        with:
+          node-version-file: ".node-version"
+          cache: true
+          run-install: true
+      - shell: bash
+        run: vp run build
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: web-assets
+          path: control-panel/build
+          if-no-files-found: error
+
+  build-go:
+    needs: build-web
+    name: go build ${{ matrix.goos }} ${{ matrix.goarch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            runner: ubuntu-latest
+            artifact_name: pear-desktop-twitch-song-requests_linux_amd64
+            exec_name: pear-desktop-twitch-song-requests_linux_amd64
+          - goos: linux
+            goarch: arm64
+            runner: ubuntu-24.04-arm
+            artifact_name: pear-desktop-twitch-song-requests_linux_arm64
+            exec_name: pear-desktop-twitch-song-requests_linux_arm64
+          - goos: windows
+            goarch: amd64
+            runner: ubuntu-latest
+            artifact_name: pear-desktop-twitch-song-requests_windows_x64
+            exec_name: pear-desktop-twitch-song-requests_windows_x64.exe
+          - goos: windows
+            goarch: arm64
+            runner: ubuntu-24.04-arm
+            artifact_name: pear-desktop-twitch-song-requests_windows_on_arm
+            exec_name: pear-desktop-twitch-song-requests_windows_on_arm.exe
+          - goos: darwin
+            goarch: amd64
+            runner: ubuntu-latest
+            artifact_name: pear-desktop-twitch-song-requests_macos_intel
+            exec_name: pear-desktop-twitch-song-requests_macos_intel
+          - goos: darwin
+            goarch: arm64
+            runner: ubuntu-24.04-arm
+            artifact_name: pear-desktop-twitch-song-requests_macos_apple_silicon
+            exec_name: pear-desktop-twitch-song-requests_macos_apple_silicon
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version-file: go.mod
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: web-assets
+          path: cmd/main/build
       - shell: bash
         run: |
-          pnpm i --frozen-lockfile
-          pnpm run -r build
-          rm -rf cmd/main/build
-          mv control-panel/build cmd/main
-          GIT_SHORT_TAG="v0.0.0+${{ github.sha }}" ./build_dist.sh
+          go mod download
+          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
+            go build -ldflags="-s -w -X main.version=v0.0.0+${{ github.sha }}" \
+            -trimpath -o "${{ matrix.exec_name }}" ./cmd/main
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: pear-desktop-twitch-song-requests_windows_x64
-          path: pear-desktop-twitch-song-requests_windows_x64.exe
-          compression-level: 0
-          if-no-files-found: error
-          archive: false
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: pear-desktop-twitch-song-requests_windows_on_arm
-          path: pear-desktop-twitch-song-requests_windows_on_arm.exe
-          compression-level: 0
-          if-no-files-found: error
-          archive: false
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: pear-desktop-twitch-song-requests_macos_intel
-          path: pear-desktop-twitch-song-requests_macos_intel
-          compression-level: 0
-          if-no-files-found: error
-          archive: false
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: pear-desktop-twitch-song-requests_macos_apple_silicon
-          path: pear-desktop-twitch-song-requests_macos_apple_silicon
-          compression-level: 0
-          if-no-files-found: error
-          archive: false
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: pear-desktop-twitch-song-requests_linux_amd64
-          path: pear-desktop-twitch-song-requests_linux_amd64
-          compression-level: 0
-          if-no-files-found: error
-          archive: false
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: pear-desktop-twitch-song-requests_linux_arm64
-          path: pear-desktop-twitch-song-requests_linux_arm64
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.exec_name }}
           compression-level: 0
           if-no-files-found: error
           archive: false

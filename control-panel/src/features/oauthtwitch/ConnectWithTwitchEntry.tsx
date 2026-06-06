@@ -9,16 +9,8 @@ function ConnectWithTwitchEntry(props: { forBot: boolean }) {
 			"client_id",
 			import.meta.env.VITE_TWITCH_CLIENT_ID ?? "7k7nl6w8e0owouonj7nb9g3k5s6gs5",
 		);
-		p.append(
-			"redirect_uri",
-			"http://" + window.location.host + "/oauth/twitch",
-		);
-		const scopes = [
-			"user:read:chat",
-			"user:write:chat",
-			"user:bot",
-			"channel:bot",
-		];
+		p.append("redirect_uri", "http://" + window.location.host + "/oauth/twitch");
+		const scopes = ["user:read:chat", "user:write:chat", "user:bot", "channel:bot"];
 		if (!props.forBot) {
 			scopes.push(
 				"channel:read:redemptions",
@@ -41,9 +33,7 @@ function ConnectWithTwitchEntry(props: { forBot: boolean }) {
 	return (
 		<>
 			<a href={`https://id.twitch.tv/oauth2/authorize?${params}`}>
-				{props.forBot
-					? "Connect with Twitch bot account"
-					: "Connect with Twitch main account"}
+				{props.forBot ? "Connect with Twitch bot account" : "Connect with Twitch main account"}
 			</a>
 		</>
 	);

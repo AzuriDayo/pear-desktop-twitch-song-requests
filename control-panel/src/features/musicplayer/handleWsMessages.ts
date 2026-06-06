@@ -51,7 +51,7 @@ export interface SongInfo {
 	views: number;
 	uploadDate?: string;
 	imageSrc?: string | null;
-	image?: unknown | null;
+	image?: unknown;
 	isPaused?: boolean;
 	songDuration: number;
 	elapsedSeconds?: number;
@@ -70,10 +70,7 @@ type MediaType =
 	| "PODCAST_EPISODE"
 	| "OTHER_VIDEO";
 
-export const handleWsMessages = (
-	data: string,
-	dispatch: Dispatch<UnknownAction>,
-) => {
+export const handleWsMessages = (data: string, dispatch: Dispatch<UnknownAction>) => {
 	try {
 		const msgData:
 			| IMsgTypePlayerInfo

@@ -14,11 +14,9 @@ type EQueueTypes = (typeof queueTypes)[keyof typeof queueTypes];
 
 const QueuePage = () => {
 	const navigate = useNavigate();
-	const [selectedQueueType, setSelectedQueueType] = useState<EQueueTypes>(
-		queueTypes.CURRENT,
-	);
+	const [selectedQueueType, setSelectedQueueType] = useState<EQueueTypes>(queueTypes.CURRENT);
 	const handleBack = () => {
-		navigate(-1); // Goes back one step in the history stack
+		void navigate(-1); // Goes back one step in the history stack
 	};
 	return (
 		<div>

@@ -20,9 +20,7 @@ const darkTheme = createTheme({
 	},
 });
 
-const root = ReactDOM.createRoot(
-	document.getElementById("root") as HTMLElement,
-);
+const root = ReactDOM.createRoot(document.getElementById("root") as HTMLElement);
 
 root.render(
 	<React.StrictMode>
@@ -36,14 +34,8 @@ root.render(
 						<Route path="/settings" element={<Settings />} />
 						<Route path="/queue" element={<Queue />} />
 						<Route path="/oauth">
-							<Route
-								path="twitch-connect"
-								element={<ConnectWithTwitchEntry forBot={false} />}
-							/>
-							<Route
-								path="twitch-connect-bot"
-								element={<ConnectWithTwitchEntry forBot={true} />}
-							/>
+							<Route path="twitch-connect" element={<ConnectWithTwitchEntry forBot={false} />} />
+							<Route path="twitch-connect-bot" element={<ConnectWithTwitchEntry forBot={true} />} />
 							<Route path="twitch-success" element={<TwitchSuccess />} />
 							<Route path="twitch" element={<ProcessTwitchOAuth />} />
 						</Route>

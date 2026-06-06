@@ -1,20 +1,11 @@
 import { type Dispatch, type UnknownAction } from "@reduxjs/toolkit";
 import { setTwitchInfo } from "./twitchSlice";
-import {
-	addSong,
-	setQueueInfo,
-	shiftQueue,
-	type SongQueueItem,
-} from "./songQueueSlice";
+import { addSong, setQueueInfo, shiftQueue, type SongQueueItem } from "./songQueueSlice";
 
-export const handleWsMessages = (
-	data: string,
-	dispatch: Dispatch<UnknownAction>,
-) => {
+export const handleWsMessages = (data: string, dispatch: Dispatch<UnknownAction>) => {
 	// Change this later its ugly af
 
-	const d: MsgTwitchInfo | MsgQueueInfo | MsgQueueAdd | MsgQueueShift =
-		JSON.parse(data);
+	const d: MsgTwitchInfo | MsgQueueInfo | MsgQueueAdd | MsgQueueShift = JSON.parse(data);
 	console.log(d);
 
 	switch (d.type) {

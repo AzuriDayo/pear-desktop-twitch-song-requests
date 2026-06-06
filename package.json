@@ -1,27 +1,22 @@
 {
-  "name": "pear-desktop-twitch-song-requests",
-  "version": "1.0.0",
-  "author": {
-    "name": "SLAzurin",
-    "email": "69220163+SLAzurin@users.noreply.github.com"
-  },
-  "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@types/node": "^25.9.1",
-    "eslint": "^10.4.0",
-    "eslint-plugin-react-hooks": "^7.1.1",
-    "eslint-plugin-react-refresh": "^0.5.2",
-    "globals": "^17.6.0",
-    "json5": "^2.2.3",
-    "prettier": "^3.8.3",
-    "prettier-config-a11y": "^1.1.2",
-    "rimraf": "^6.1.3",
-    "typescript": "^6.0.3",
-    "typescript-eslint": "^8.60.0"
-  },
-  "keywords": [],
-  "license": "MIT",
-  "productName": "pear-desktop-twitch-song-requests",
-  "scripts": {},
-  "packageManager": "pnpm@11.5.0+sha512.dbfcc4f81cf48597afd4bc391ffdf12c11f1a9fb83a395bfa6b0a2d9cc2fd8ffebafdb1ccbd529632153f793904c2615b7f09fe1a345473fd1c35845172a8eb1"
+	"name": "pear-desktop-twitch-song-requests",
+	"version": "1.0.0",
+	"keywords": [],
+	"license": "MIT",
+	"author": {
+		"name": "SLAzurin",
+		"email": "69220163+SLAzurin@users.noreply.github.com"
+	},
+	"scripts": {
+		"prepare": "vp config"
+	},
+	"devDependencies": {
+		"@types/node": "^25.9.1",
+		"globals": "^17.6.0",
+		"json5": "^2.2.3",
+		"rimraf": "^6.1.3",
+		"vite-plus": "catalog:"
+	},
+	"packageManager": "pnpm@11.5.2+sha512.71c631e382066efc25625d5cf029075de07b61b37f6e27350fbd84b1bda5864c8c1967adc280776b45c30a715c0359a3be08fef42d5bb09e2b99029979692916",
+	"productName": "pear-desktop-twitch-song-requests"
 }

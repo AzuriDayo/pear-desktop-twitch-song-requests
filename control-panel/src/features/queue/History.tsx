@@ -1,11 +1,7 @@
 import Paper from "@mui/material/Paper";
 
 import { useEffect, useState, useCallback } from "react";
-import {
-	DataGrid,
-	type GridRenderCellParams,
-	type GridColDef,
-} from "@mui/x-data-grid";
+import { DataGrid, type GridRenderCellParams, type GridColDef } from "@mui/x-data-grid";
 
 interface IRequesterData {
 	video_id: string;
@@ -85,29 +81,24 @@ const History = () => {
 	const [rowCount, setRowCount] = useState(0);
 	const [loading, setLoading] = useState(false);
 
-	const fetchDataFromServer = useCallback(
-		async (page: number, pageSize: number) => {
-			setLoading(true);
-			try {
-				const response = await fetch(
-					`/api/v1/requesters/history?page=${page}&perPage=${pageSize}`,
-				);
-				const data = await response.json();
-				setRows(data.items);
-				setRowCount(data.max_results);
-			} catch (e) {
-				console.error("Failed to load history", e);
-			} finally {
-				setLoading(false);
-			}
-		},
-		[],
-	);
+	const fetchDataFromServer = useCallback(async (page: number, pageSize: number) => {
+		setLoading(true);
+		try {
+			const response = await fetch(`/api/v1/requesters/history?page=${page}&perPage=${pageSize}`);
+			const data = await response.json();
+			setRows(data.items);
+			setRowCount(data.max_results);
+		} catch (e) {
+			console.error("Failed to load history", e);
+		} finally {
+			setLoading(false);
+		}
+	}, []);
 
 	useEffect(() => {
 		const page = paginationModel.page;
 		const pageSize = paginationModel.pageSize;
-		(async () => {
+		void (async () => {
 			await fetchDataFromServer(page, pageSize);
 		})();
 	}, [paginationModel, fetchDataFromServer]); // Re-fetch data whenever pagination model changes
