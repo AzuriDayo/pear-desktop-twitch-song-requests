@@ -39,6 +39,7 @@ jobs:
           if-no-files-found: error
 
   build-go:
+    name: go build ${{ matrix.goos }} ${{ matrix.goarch }}
     needs: build-web
     runs-on: ${{ matrix.runner }}
     strategy:

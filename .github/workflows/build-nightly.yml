@@ -37,6 +37,7 @@ jobs:
 
   build-go:
     needs: build-web
+    name: go build ${{ matrix.goos }} ${{ matrix.goarch }}
     runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
