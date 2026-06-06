@@ -10,6 +10,8 @@ var version = ""
 
 func main() {
 	if !semver.IsValid(version) {
-		log.Fatalln("semver invalid")
+		log.Fatalln(version, " invalid")
+	} else {
+		log.Println(version, " valid")
 	}
 }
