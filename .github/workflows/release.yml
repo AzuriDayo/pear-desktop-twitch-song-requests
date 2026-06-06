@@ -31,8 +31,7 @@ jobs:
           fi
       - shell: bash
         run: |
-          pnpm i --frozen-lockfile
-          pnpm run -r build
+          vp run build
           rm -rf cmd/main/build
           mv control-panel/build cmd/main
           GIT_SHORT_TAG='${{ steps.version-tag-ref.outputs.ref }}' ./build_dist.sh

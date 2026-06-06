@@ -3,6 +3,17 @@ import { defineConfig } from "vite-plus";
 const projectSpecificIgnores = ["*.json", "pear-api-queue.mts", "pear-api-queue-search-songs.mts"];
 
 export default defineConfig({
+	run: {
+		tasks: {
+			build: {
+				command: ["vp check", "vp build"],
+				cache: true,
+				cwd: "control-panel",
+				output: ["build"],
+				input: ["src/**"],
+			},
+		},
+	},
 	staged: {
 		"*": "vp check --fix",
 	},
