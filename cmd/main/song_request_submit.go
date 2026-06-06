@@ -61,6 +61,9 @@ func (a *App) songRequestSubmit(useProperHelix *helix.Client, properUserID strin
 	nowPlayingSong := songrequests.SongResult{}
 
 	resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/song")
+	if err == nil {
+		defer resp.Body.Close()
+	}
 	if err != nil {
 		useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
 			BroadcasterID:        event.BroadcasterUserId,

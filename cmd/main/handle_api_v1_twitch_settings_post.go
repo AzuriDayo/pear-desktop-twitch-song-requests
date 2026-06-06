@@ -4,6 +4,7 @@ package main
 import (
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/gen/model"
@@ -48,7 +49,10 @@ func (a *App) handleApiV1SettingsPATCH(c echo.Context) error {
 			stmt := Settings.INSERT(Settings.AllColumns).MODEL(newSetting).ON_CONFLICT(Settings.Key).DO_UPDATE(SET(
 				Settings.Value.SET(String(v)),
 			))
-			stmt.ExecContext(c.Request().Context(), db)
+			_, err = stmt.ExecContext(c.Request().Context(), db)
+			if err != nil {
+				log.Println("handleApiV1SettingsPATCH: failed to save setting", k, err)
+			}
 			a.songRequestRewardID = v
 		}
 	}

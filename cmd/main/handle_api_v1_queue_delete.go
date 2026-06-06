@@ -30,9 +30,8 @@ func (a *App) handleApiV1QueueDeleteDELETE(c echo.Context) error {
 	idx-- // convert to 0-based
 
 	songQueueMutex.Lock()
-	defer songQueueMutex.Unlock()
-
 	if idx >= len(songQueue) {
+		songQueueMutex.Unlock()
 		return c.JSON(http.StatusNotFound, echo.Map{"error": "idx out of range"})
 	}
 
@@ -41,9 +40,17 @@ func (a *App) handleApiV1QueueDeleteDELETE(c echo.Context) error {
 	// Remove from internal queue
 	songQueue = append(songQueue[:idx], songQueue[idx+1:]...)
 
+	// Capture the new head (if any) before releasing the lock.
+	var newHeadVideoID string
+	if idx == 0 && len(songQueue) > 0 {
+		newHeadVideoID = songQueue[0].Song.VideoID
+	}
+	songQueueMutex.Unlock()
+
 	// If the first item was removed, replicate !delsong pear-desktop cleanup
+	// (all HTTP calls happen without holding the queue mutex).
 	if idx == 0 {
-		// Try to find and remove the song from pear-desktop player queue
+		// Try to find and remove the song from pear-desktop player queue.
 		intervalDelay := time.Second
 		maxRetries := 3
 		pearIndex := -1
@@ -52,8 +59,10 @@ func (a *App) handleApiV1QueueDeleteDELETE(c echo.Context) error {
 			time.Sleep(intervalDelay)
 			found2, videoData := helpers.FindAllVideoIDCounterparts(song.Song.VideoID)
 			found = found2
-			pearIndex = videoData[song.Song.VideoID].Index
-			break
+			if found2 {
+				pearIndex = videoData[song.Song.VideoID].Index
+				break
+			}
 		}
 		if found {
 			req, _ := http.NewRequest(http.MethodDelete, "http://"+songrequests.GetPearDesktopHost()+"/api/v1/queue/"+strconv.Itoa(pearIndex), nil)
@@ -62,16 +71,22 @@ func (a *App) handleApiV1QueueDeleteDELETE(c echo.Context) error {
 			if err != nil || resp.StatusCode != http.StatusNoContent {
 				log.Println("delsong API cleanup: Failed to delete song from pear-desktop, proceeding anyway...")
 			}
+			if resp != nil {
+				resp.Body.Close()
+			}
 		}
-		if len(songQueue) > 0 {
+		if newHeadVideoID != "" {
 			b := map[string]any{
-				"videoId":        songQueue[0].Song.VideoID,
+				"videoId":        newHeadVideoID,
 				"insertPosition": "INSERT_AFTER_CURRENT_VIDEO",
 			}
 			bb, _ := json.Marshal(b)
 			resp, err := http.Post("http://"+songrequests.GetPearDesktopHost()+"/api/v1/queue", "application/json", bytes.NewBuffer(bb))
 			if err != nil || resp.StatusCode != http.StatusNoContent {
-				log.Println("delsong API cleanup: Failed to add next song in queue to pear-desktop. https://youtu.be/" + songQueue[0].Song.VideoID)
+				log.Println("delsong API cleanup: Failed to add next song in queue to pear-desktop. https://youtu.be/" + newHeadVideoID)
+			}
+			if resp != nil {
+				resp.Body.Close()
 			}
 		}
 	}

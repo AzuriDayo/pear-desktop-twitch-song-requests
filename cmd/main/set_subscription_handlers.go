@@ -48,16 +48,17 @@ func (a *App) SetSubscriptionHandlers() {
 		trimmedText = strings.Trim(event.Message.Text, " ͏") // idk why twitch adds this character
 
 		for _, v := range event.Badges {
-			if v.SetId == "subscriber" || v.SetId == "founder" {
-				isSub = true
-			}
 			if v.SetId == "broadcaster" {
 				isBroadcaster = true
 				isModerator = true
 				isSub = true
+				break // broadcaster implies all other roles
 			}
 			if v.SetId == "moderator" || v.SetId == "lead_moderator" {
 				isModerator = true
+				isSub = true
+			}
+			if v.SetId == "subscriber" || v.SetId == "founder" {
 				isSub = true
 			}
 			if v.SetId == "vip" {
@@ -140,6 +141,7 @@ func (a *App) SetSubscriptionHandlers() {
 
 			resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/song")
 			if err == nil {
+				defer resp.Body.Close()
 				bb, err := io.ReadAll(resp.Body)
 				if err == nil {
 					rootErr = json.Unmarshal(bb, &song)
@@ -192,6 +194,9 @@ func (a *App) SetSubscriptionHandlers() {
 			song := songrequests.SongResult{}
 
 			resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/song")
+			if err == nil {
+				defer resp.Body.Close()
+			}
 			if err != nil {
 				useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
 					BroadcasterID:        event.BroadcasterUserId,
@@ -286,8 +291,8 @@ func (a *App) SetSubscriptionHandlers() {
 				return
 			}
 
-			songQueueMutex.RLock()
-			defer songQueueMutex.RUnlock()
+			songQueueMutex.Lock()
+			defer songQueueMutex.Unlock()
 
 			// validate if chatter is the one who requested the song in queue before delete
 			// or validate if permissions >= mod
@@ -327,8 +332,10 @@ func (a *App) SetSubscriptionHandlers() {
 					time.Sleep(intervalDelay)
 					found2, videoData := helpers.FindAllVideoIDCounterparts(song.Song.VideoID)
 					found = found2
-					pearIndex = videoData[song.Song.VideoID].Index
-					break
+					if found2 {
+						pearIndex = videoData[song.Song.VideoID].Index
+						break
+					}
 				}
 				if found {
 					req, _ := http.NewRequest(http.MethodDelete, "http://"+songrequests.GetPearDesktopHost()+"/api/v1/queue/"+strconv.Itoa(pearIndex), nil)

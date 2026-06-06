@@ -147,7 +147,7 @@ func (a *App) SetSubscriptionHandlersBot() {
 			}
 			hasSkipped := false
 			skipMutex.Lock()
-			if time.Now().After(lastSkipped.Add(time.Second * -10)) {
+			if time.Now().After(lastSkipped.Add(time.Second * 10)) {
 				hasSkipped = true
 				songQueueMutex.Lock()
 				http.Post("http://"+songrequests.GetPearDesktopHost()+"/api/v1/next", "application/json", nil)
@@ -188,6 +188,7 @@ func (a *App) SetSubscriptionHandlersBot() {
 
 			resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/song")
 			if err == nil {
+				defer resp.Body.Close()
 				bb, err := io.ReadAll(resp.Body)
 				if err == nil {
 					rootErr = json.Unmarshal(bb, &song)
@@ -240,6 +241,9 @@ func (a *App) SetSubscriptionHandlersBot() {
 			song := songrequests.SongResult{}
 
 			resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/song")
+			if err == nil {
+				defer resp.Body.Close()
+			}
 			if err != nil {
 				useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
 					BroadcasterID:        event.BroadcasterUserId,
@@ -334,8 +338,8 @@ func (a *App) SetSubscriptionHandlersBot() {
 				return
 			}
 
-			songQueueMutex.RLock()
-			defer songQueueMutex.RUnlock()
+			songQueueMutex.Lock()
+			defer songQueueMutex.Unlock()
 
 			// validate if chatter is the one who requested the song in queue before delete
 			// or validate if permissions >= mod
@@ -375,8 +379,10 @@ func (a *App) SetSubscriptionHandlersBot() {
 					time.Sleep(intervalDelay)
 					found2, videoData := helpers.FindAllVideoIDCounterparts(song.Song.VideoID)
 					found = found2
-					pearIndex = videoData[song.Song.VideoID].Index
-					break
+					if found2 {
+						pearIndex = videoData[song.Song.VideoID].Index
+						break
+					}
 				}
 				if found {
 					req, _ := http.NewRequest(http.MethodDelete, "http://"+songrequests.GetPearDesktopHost()+"/api/v1/queue/"+strconv.Itoa(pearIndex), nil)
