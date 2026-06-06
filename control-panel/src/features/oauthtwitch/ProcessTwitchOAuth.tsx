@@ -18,9 +18,7 @@ export function ProcessTwitchOAuth() {
 			if (queryParams.has("error") && queryParams.has("error_description")) {
 				return {
 					error:
-						(queryParams.get("error") ?? "") +
-						": " +
-						(queryParams.get("error_description") ?? ""),
+						(queryParams.get("error") ?? "") + ": " + (queryParams.get("error_description") ?? ""),
 				};
 			}
 		} catch {
@@ -38,9 +36,7 @@ export function ProcessTwitchOAuth() {
 				/*
 					example fragment: #access_token=73d0f8mkabpbmjp921asv2jaidwxn&scope=channel%3Amanage%3Apolls+channel%3Aread%3Apolls&state=c3ab8aa609ea11e793ae92361f002671&token_type=bearer
 				*/
-				const hashParams = new URLSearchParams(
-					window.location.hash.substring(1),
-				);
+				const hashParams = new URLSearchParams(window.location.hash.substring(1));
 				if (hashParams.has("access_token")) {
 					const obj: {
 						access_token: string;
@@ -61,9 +57,9 @@ export function ProcessTwitchOAuth() {
 					})
 						.then((response) => {
 							if (response.status === 200) {
-								navigate("/oauth/twitch-success");
+								void navigate("/oauth/twitch-success");
 							} else {
-								response.text().then((v) => {
+								void response.text().then((v) => {
 									if (v.length > 0) {
 										try {
 											const j = JSON.parse(v);
@@ -92,7 +88,7 @@ export function ProcessTwitchOAuth() {
 				return;
 			}
 		} else {
-			navigate("/");
+			void navigate("/");
 		}
 	}, [navigate]);
 

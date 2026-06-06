@@ -26,10 +26,7 @@ export const songQueueSlice = createSlice({
 	name: "queuestate",
 	initialState,
 	reducers: {
-		setQueueInfo: (
-			state,
-			action: PayloadAction<{ song_queue: SongQueueItem[] }>,
-		) => {
+		setQueueInfo: (state, action: PayloadAction<{ song_queue: SongQueueItem[] }>) => {
 			state.isLoaded = true;
 			if (!action.payload.song_queue) state.song_queue = [];
 			else state.song_queue = action.payload.song_queue;
@@ -46,8 +43,7 @@ export const songQueueSlice = createSlice({
 	},
 });
 
-export const { setQueueInfo, addSong, shiftQueue, removeSongAtIndex } =
-	songQueueSlice.actions;
+export const { setQueueInfo, addSong, shiftQueue, removeSongAtIndex } = songQueueSlice.actions;
 
 export const selectQueueState = (state: RootState) => state.songQueueState;
 

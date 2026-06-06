@@ -12,9 +12,7 @@ import IconButton from "@mui/material/IconButton";
 import DeleteIcon from "@mui/icons-material/Delete";
 
 const Queue = () => {
-	const { song_queue, isLoaded } = useAppSelector(
-		(state) => state.songQueueState,
-	);
+	const { song_queue, isLoaded } = useAppSelector((state) => state.songQueueState);
 	const playerState = useAppSelector((state) => state.musicPlayerState);
 	const dispatch = useAppDispatch();
 
@@ -69,18 +67,9 @@ const Queue = () => {
 			<br />
 			{isLoaded ? (
 				song_queue.length > 0 ? (
-					<List
-						sx={{ width: "100%", maxWidth: 360, bgcolor: "background.paper" }}
-					>
+					<List sx={{ width: "100%", maxWidth: 360, bgcolor: "background.paper" }}>
 						{song_queue.map(
-							(
-								{
-									requested_by,
-									song: { artist, imageUrl, title, videoId },
-									is_ninja,
-								},
-								i,
-							) => {
+							({ requested_by, song: { artist, imageUrl, title, videoId }, is_ninja }, i) => {
 								return (
 									<React.Fragment key={videoId}>
 										<ListItem
@@ -100,18 +89,16 @@ const Queue = () => {
 												<Avatar alt={`${title} - ${artist}`} src={imageUrl} />
 											</ListItemAvatar>
 											<ListItemText
-												primary={
-													`#${i + 1} ` + requested_by + (is_ninja ? " 🥷" : "")
-												}
+												primary={`#${i + 1} ` + requested_by + (is_ninja ? " 🥷" : "")}
 												secondary={
-													<a
-														href={`https://youtu.be/${videoId}`}
-														target="_blank"
-													>
+													<a href={`https://youtu.be/${videoId}`} target="_blank">
 														<Typography
 															component="span"
 															variant="body2"
-															sx={{ color: "text.primary", display: "inline" }}
+															sx={{
+																color: "text.primary",
+																display: "inline",
+															}}
 														>
 															{title}
 														</Typography>
@@ -120,9 +107,7 @@ const Queue = () => {
 												}
 											/>
 										</ListItem>
-										{i !== song_queue.length - 1 && (
-											<Divider variant="inset" component="li" />
-										)}
+										{i !== song_queue.length - 1 && <Divider variant="inset" component="li" />}
 									</React.Fragment>
 								);
 							},

@@ -1,10 +1,13 @@
 # SQLite readme
+
 Browse data with:
+
 ```sh
 sqlite-utils tables pear-desktop-twitch-song-requests.db
 ```
 
 running migrations and jet
+
 ```sh
 # ensure ~/go/bin is in path
 

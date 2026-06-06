@@ -1,14 +1,12 @@
 {
 	"name": "control-panel",
-	"private": true,
 	"version": "0.0.0",
+	"private": true,
 	"type": "module",
 	"scripts": {
-		"dev": "vite",
-		"build": "tsc -b && pnpm run lint && pnpm run format && vite build",
-		"lint": "eslint .",
-		"preview": "vite preview",
-		"format": "prettier --write ."
+		"dev": "vp dev",
+		"build": " vp check && vp build",
+		"preview": "vp preview"
 	},
 	"dependencies": {
 		"@mui/icons-material": "^7.3.11",
@@ -30,9 +28,8 @@
 		"@types/react": "^19.2.15",
 		"@types/react-dom": "^19.2.3",
 		"@vitejs/plugin-react": "^6.0.2",
-		"jiti": "^2.7.0",
 		"jsdom": "^29.0.1",
-		"vite": "^8.0.14"
-	},
-	"prettier": "prettier-config-a11y"
+		"vite": "catalog:",
+		"vite-plus": "catalog:"
+	}
 }

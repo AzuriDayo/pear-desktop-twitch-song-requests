@@ -45,10 +45,7 @@ export function MusicPlayer() {
 
 		return () => {
 			ws.onclose = null;
-			if (
-				ws.readyState === WebSocket.OPEN ||
-				ws.readyState === WebSocket.CONNECTING
-			) {
+			if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
 				ws.close();
 			}
 			if (reconnectTimer !== null) clearTimeout(reconnectTimer);
