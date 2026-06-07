@@ -30,8 +30,9 @@ func (a *App) handleApiV1QueueDeleteDELETE(c echo.Context) error {
 	idx-- // convert to 0-based
 
 	songQueueMutex.Lock()
+	defer songQueueMutex.Unlock()
+
 	if idx >= len(songQueue) {
-		songQueueMutex.Unlock()
 		return c.JSON(http.StatusNotFound, echo.Map{"error": "idx out of range"})
 	}
 
@@ -40,15 +41,9 @@ func (a *App) handleApiV1QueueDeleteDELETE(c echo.Context) error {
 	// Remove from internal queue
 	songQueue = append(songQueue[:idx], songQueue[idx+1:]...)
 
-	// Capture the new head (if any) before releasing the lock.
-	var newHeadVideoID string
-	if idx == 0 && len(songQueue) > 0 {
-		newHeadVideoID = songQueue[0].Song.VideoID
-	}
-	songQueueMutex.Unlock()
-
-	// If the first item was removed, replicate !delsong pear-desktop cleanup
-	// (all HTTP calls happen without holding the queue mutex).
+	// If the first item was removed, replicate !delsong pear-desktop cleanup.
+	// Mutex is intentionally held here: concurrent deletes of idx=0 must be
+	// serialized so the POST of the new head reflects the actual queue state.
 	if idx == 0 {
 		// Try to find and remove the song from pear-desktop player queue.
 		intervalDelay := time.Second
@@ -75,15 +70,15 @@ func (a *App) handleApiV1QueueDeleteDELETE(c echo.Context) error {
 				resp.Body.Close()
 			}
 		}
-		if newHeadVideoID != "" {
+		if len(songQueue) > 0 {
 			b := map[string]any{
-				"videoId":        newHeadVideoID,
+				"videoId":        songQueue[0].Song.VideoID,
 				"insertPosition": "INSERT_AFTER_CURRENT_VIDEO",
 			}
 			bb, _ := json.Marshal(b)
 			resp, err := http.Post("http://"+songrequests.GetPearDesktopHost()+"/api/v1/queue", "application/json", bytes.NewBuffer(bb))
 			if err != nil || resp.StatusCode != http.StatusNoContent {
-				log.Println("delsong API cleanup: Failed to add next song in queue to pear-desktop. https://youtu.be/" + newHeadVideoID)
+				log.Println("delsong API cleanup: Failed to add next song in queue to pear-desktop. https://youtu.be/" + songQueue[0].Song.VideoID)
 			}
 			if resp != nil {
 				resp.Body.Close()
@@ -98,11 +93,11 @@ func (a *App) handleApiV1QueueDeleteDELETE(c echo.Context) error {
 		"type":       "QUEUE_INFO",
 		"song_queue": songQueue,
 	})
-	a.clientsMu.RLock()
+	a.clientsMu.Lock()
 	for ws := range a.clients {
 		websocket.Message.Send(ws, string(queueInfo))
 	}
-	a.clientsMu.RUnlock()
+	a.clientsMu.Unlock()
 
 	return c.NoContent(http.StatusNoContent)
 }

@@ -148,9 +148,14 @@ func (a *App) SetSubscriptionHandlersBot() {
 			hasSkipped := false
 			skipMutex.Lock()
 			if time.Now().After(lastSkipped.Add(time.Second * 10)) {
-				hasSkipped = true
 				songQueueMutex.Lock()
-				http.Post("http://"+songrequests.GetPearDesktopHost()+"/api/v1/next", "application/json", nil)
+				resp, err := http.Post("http://"+songrequests.GetPearDesktopHost()+"/api/v1/next", "application/json", nil)
+				if err == nil {
+					resp.Body.Close()
+					hasSkipped = resp.StatusCode == 204
+				} else {
+					log.Println("!skip: failed to POST to pear-desktop:", err)
+				}
 				lastSkipped = time.Now()
 				songQueueMutex.Unlock()
 			}
@@ -235,6 +240,10 @@ func (a *App) SetSubscriptionHandlersBot() {
 			lastUsedQueueCmdBot = time.Now()
 			queueCmdMutexBot.Unlock()
 
+			// RLock is held across the http.Get intentionally: we want the songQueue
+			// snapshot we read below to be consistent with the current-song state
+			// fetched from pear-desktop. A concurrent songRequestLogic (which takes
+			// a write Lock) will simply wait until !queue finishes.
 			songQueueMutex.RLock()
 			defer songQueueMutex.RUnlock()
 

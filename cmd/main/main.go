@@ -64,7 +64,6 @@ type App struct {
 	twitchWSService         *appservices.TwitchWS
 	twitchWSBotService      *appservices.TwitchWS
 	streamOnline            bool
-	twitchWSIncomingMsgs    chan []byte
 	pearDesktopIncomingMsgs chan []byte
 	ctx                     context.Context
 	cancel                  context.CancelFunc
@@ -96,7 +95,6 @@ func NewApp() *App {
 		helix:                   c,
 		helixBot:                c2,
 		clientsBroadcast:        make(chan string),
-		twitchWSIncomingMsgs:    make(chan []byte),
 		clientsMu:               sync.RWMutex{},
 		clients:                 make(map[*websocket.Conn]struct{}),
 		pearDesktopIncomingMsgs: make(chan []byte),

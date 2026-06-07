@@ -8,7 +8,7 @@ import (
 func ParseSearchQuery(s string) (string, bool) {
 	s = strings.ReplaceAll(s, " ͏", "") // ok wtf twitch
 	s = strings.TrimSpace(s)
-	if len(s) >= 4 && strings.ToLower(s[:4]) == "!sr " {
+	if len(s) >= 4 && strings.EqualFold(s[:4], "!sr ") {
 		s = s[4:]
 	}
 	url, err := url.Parse(s)
