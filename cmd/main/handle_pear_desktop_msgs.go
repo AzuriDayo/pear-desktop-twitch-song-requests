@@ -47,8 +47,11 @@ func (a *App) handlePearDesktopMsgs() {
 				playerInfo.Song = songinfo
 				songQueueMutex.Unlock()
 			case "VIDEO_CHANGED":
-				// Phase 1: Update playerInfo and capture queue state under a brief lock.
+				// songQueueMutex is held for the entire case: we must not allow concurrent
+				// queue mutations (songRequestLogic, !delsong, API delete) to interleave
+				// while we coordinate pear-desktop player state with the internal queue.
 				songQueueMutex.Lock()
+
 				newVideoId := string(v.GetStringBytes("song", "videoId"))
 				playerInfo.Position = v.GetInt("position")
 				playerInfo.Song = playerSonginfo{
@@ -58,21 +61,16 @@ func (a *App) handlePearDesktopMsgs() {
 					AlternativeTitle: string(v.GetStringBytes("song", "alternativeTitle")),
 					VideoId:          newVideoId,
 				}
-				var queueHeadCopy SongQueueItem
-				hasQueue := len(songQueue) > 0
-				if hasQueue {
-					queueHeadCopy = songQueue[0] // value copy so we can release the lock
-				}
-				songQueueMutex.Unlock()
 
-				if !hasQueue {
+				if len(songQueue) == 0 {
+					songQueueMutex.Unlock()
 					continue
 				}
 
-				// Phase 2: Determine if queue head is now playing — no lock needed (read-only copy).
-				isQueueHeadPlayingNow := queueHeadCopy.Song.VideoID == newVideoId
+				// Determine if the queue head is now playing.
+				isQueueHeadPlayingNow := songQueue[0].Song.VideoID == newVideoId
 				if !isQueueHeadPlayingNow {
-					found, allVideoIDCounterparts := helpers.FindAllVideoIDCounterparts(queueHeadCopy.Song.VideoID)
+					found, allVideoIDCounterparts := helpers.FindAllVideoIDCounterparts(songQueue[0].Song.VideoID)
 					if found {
 						if _, ok := allVideoIDCounterparts[newVideoId]; ok {
 							isQueueHeadPlayingNow = true
@@ -81,43 +79,36 @@ func (a *App) handlePearDesktopMsgs() {
 				}
 
 				if !isQueueHeadPlayingNow {
-					log.Println("Failed to play next song in queue: " + queueHeadCopy.Song.Title + " - " + queueHeadCopy.Song.Artist)
+					log.Println("Failed to play next song in queue: " + songQueue[0].Song.Title + " - " + songQueue[0].Song.Artist)
 					log.Println("Make sure it plays next in pear desktop to resume song requests!")
+					songQueueMutex.Unlock()
 					continue
 				}
 
-				// Phase 3: Handle unknown song metadata — update actual queue entry under lock.
-				if queueHeadCopy.Song.IsUnknown {
-					queueHeadCopy.Song.Artist = string(v.GetStringBytes("song", "artist"))
-					queueHeadCopy.Song.ImageUrl = string(v.GetStringBytes("song", "imageSrc"))
-					queueHeadCopy.Song.Title = string(v.GetStringBytes("song", "title"))
-					songQueueMutex.Lock()
-					if len(songQueue) > 0 {
-						songQueue[0].Song = queueHeadCopy.Song
-					}
-					songQueueMutex.Unlock()
-					go saveSongHistory(&queueHeadCopy.Song, queueHeadCopy.RequestedBy, queueHeadCopy.RequestedByUserID, queueHeadCopy.IsNinja)
+				// Handle unknown song metadata: fill in live data from pear-desktop.
+				if songQueue[0].Song.IsUnknown {
+					songQueue[0].Song.Artist = string(v.GetStringBytes("song", "artist"))
+					songQueue[0].Song.ImageUrl = string(v.GetStringBytes("song", "imageSrc"))
+					songQueue[0].Song.Title = string(v.GetStringBytes("song", "title"))
+					// Value-copy the head before the queue shifts so the goroutine
+					// doesn't alias into the slice after songQueue[1:].
+					headSnapshot := songQueue[0]
+					go saveSongHistory(&headSnapshot.Song, headSnapshot.RequestedBy, headSnapshot.RequestedByUserID, headSnapshot.IsNinja)
 				}
 
-				// Phase 4: Shift queue and promote the next song.
-				// HTTP calls and polling happen outside the mutex to avoid holding it for seconds.
+				// Shift queue and promote the next song.
+				// Lock is held through HTTP calls and polling to prevent any concurrent
+				// mutation from observing or modifying the queue mid-transition.
 				nextInQueueIsAdded := false
 				for !nextInQueueIsAdded {
-					// Shift the queue under a brief lock and capture the new head.
-					songQueueMutex.Lock()
 					if len(songQueue) == 0 {
-						songQueueMutex.Unlock()
 						break
 					}
 					songQueue = songQueue[1:]
-					var nextHeadCopy *SongQueueItem
-					if len(songQueue) > 0 {
-						c := songQueue[0]
-						nextHeadCopy = &c
-					}
-					songQueueMutex.Unlock()
 
 					// Broadcast QUEUE_SHIFT to control-panel clients.
+					// clientsMu is safe to acquire here: no code path holds clientsMu
+					// and then tries to acquire songQueueMutex (verified in ws handler).
 					queueInfoOnShift, _ := json.Marshal(echo.Map{
 						"type": "QUEUE_SHIFT",
 					})
@@ -127,31 +118,30 @@ func (a *App) handlePearDesktopMsgs() {
 					}
 					a.clientsMu.Unlock()
 
-					if nextHeadCopy == nil {
+					if len(songQueue) == 0 {
 						break
 					}
 
-					// Post next song to pear desktop (no lock held).
+					// Post next song to pear desktop.
 					b := echo.Map{
-						"videoId":        nextHeadCopy.Song.VideoID,
+						"videoId":        songQueue[0].Song.VideoID,
 						"insertPosition": "INSERT_AFTER_CURRENT_VIDEO",
 					}
 					bb, _ := json.Marshal(b)
 					resp, err := http.Post("http://"+songrequests.GetPearDesktopHost()+"/api/v1/queue", "application/json", bytes.NewBuffer(bb))
 					if err != nil || resp.StatusCode != http.StatusNoContent {
-						emsg := "Internal error when adding song to pear desktop"
-						log.Println(emsg, err)
+						log.Println("Internal error when adding song to pear desktop", err)
 					}
 					if resp != nil {
 						resp.Body.Close()
 					}
 
-					// Poll to verify the song was actually added (no lock held).
+					// Poll to verify the song was actually added.
 					intervalDelay := time.Second
 					maxRetries := 5
 					for range maxRetries {
 						time.Sleep(intervalDelay)
-						found, _ := helpers.FindAllVideoIDCounterparts(nextHeadCopy.Song.VideoID)
+						found, _ := helpers.FindAllVideoIDCounterparts(songQueue[0].Song.VideoID)
 						if found {
 							nextInQueueIsAdded = true
 							break
@@ -167,10 +157,11 @@ func (a *App) handlePearDesktopMsgs() {
 						a.helix.SendChatMessage(&helix.SendChatMessageParams{
 							BroadcasterID: a.twitchDataStruct.userID,
 							SenderID:      senderID,
-							Message:       "Sorry " + nextHeadCopy.RequestedBy + " , I failed to add https://youtu.be/" + nextHeadCopy.Song.VideoID + " next and will be removed from queue.",
+							Message:       "Sorry " + songQueue[0].RequestedBy + " , I failed to add https://youtu.be/" + songQueue[0].Song.VideoID + " next and will be removed from queue.",
 						})
 					}
 				}
+				songQueueMutex.Unlock()
 			case "PLAYER_STATE_CHANGED":
 				songQueueMutex.Lock()
 				playerInfo.Position = v.GetInt("position")
