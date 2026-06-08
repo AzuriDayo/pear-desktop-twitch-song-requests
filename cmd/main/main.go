@@ -39,7 +39,7 @@ type twitchData struct {
 func main() {
 	setTitle("Pear Desktop Twitch Song Requests by AzuriDayo_")
 	log.Println("Starting Pear Desktop Twitch Song Requests", version)
-	checkForUpdates()
+	go checkForUpdates()
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
@@ -64,7 +64,6 @@ type App struct {
 	twitchWSService         *appservices.TwitchWS
 	twitchWSBotService      *appservices.TwitchWS
 	streamOnline            bool
-	twitchWSIncomingMsgs    chan []byte
 	pearDesktopIncomingMsgs chan []byte
 	ctx                     context.Context
 	cancel                  context.CancelFunc
@@ -76,12 +75,18 @@ type App struct {
 
 func NewApp() *App {
 	ctx, cancel := context.WithCancel(context.Background())
-	c, _ := helix.NewClient(&helix.Options{
+	c, err := helix.NewClient(&helix.Options{
 		ClientID: data.GetTwitchClientID(),
 	})
-	c2, _ := helix.NewClient(&helix.Options{
+	if err != nil {
+		log.Fatal("Failed to create helix client: ", err)
+	}
+	c2, err := helix.NewClient(&helix.Options{
 		ClientID: data.GetTwitchClientID(),
 	})
+	if err != nil {
+		log.Fatal("Failed to create helix bot client: ", err)
+	}
 	return &App{
 		twitchDataStruct:        &twitchData{},
 		twitchDataStructBot:     &twitchData{},
@@ -90,7 +95,6 @@ func NewApp() *App {
 		helix:                   c,
 		helixBot:                c2,
 		clientsBroadcast:        make(chan string),
-		twitchWSIncomingMsgs:    make(chan []byte),
 		clientsMu:               sync.RWMutex{},
 		clients:                 make(map[*websocket.Conn]struct{}),
 		pearDesktopIncomingMsgs: make(chan []byte),
@@ -147,8 +151,9 @@ func (a *App) Run() error {
 
 	// Auto reconnect twitch ws
 	go func() {
+		twitchWSService := appservices.NewTwitchWS(a.helix, &a.twitchDataStruct.userID, &a.twitchDataStruct.login, nil, nil, nil, songrequests.GetSubscriptions(), a.SetSubscriptionHandlers, false)
+		a.twitchWSService = twitchWSService
 		for {
-			a.twitchWSService = appservices.NewTwitchWS(a.helix, &a.twitchDataStruct.userID, &a.twitchDataStruct.login, nil, nil, nil, songrequests.GetSubscriptions(), a.SetSubscriptionHandlers, false)
 			if a.helix.GetUserAccessToken() != "" {
 				valid, _, _ := a.helix.ValidateToken(a.helix.GetUserAccessToken())
 				if valid {
@@ -167,10 +172,11 @@ func (a *App) Run() error {
 		}
 	}()
 
-	// Auto reconnect twitch ws
+	// Auto reconnect twitch ws bot
 	go func() {
+		twitchWSBotService := appservices.NewTwitchWS(a.helixBot, &a.twitchDataStructBot.userID, &a.twitchDataStructBot.login, a.helix, &a.twitchDataStruct.userID, &a.twitchDataStruct.login, songrequests.GetSubscriptionsBot(), a.SetSubscriptionHandlersBot, true)
+		a.twitchWSBotService = twitchWSBotService
 		for {
-			a.twitchWSBotService = appservices.NewTwitchWS(a.helixBot, &a.twitchDataStructBot.userID, &a.twitchDataStructBot.login, a.helix, &a.twitchDataStruct.userID, &a.twitchDataStruct.login, songrequests.GetSubscriptionsBot(), a.SetSubscriptionHandlersBot, true)
 			if a.helixBot.GetUserAccessToken() != "" {
 				valid, _, _ := a.helixBot.ValidateToken(a.helixBot.GetUserAccessToken())
 				if valid {

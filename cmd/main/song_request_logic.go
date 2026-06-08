@@ -29,13 +29,19 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, requestedStringIsS
 	songQueue = append(songQueue, songQueueItem)
 
 	if len(songQueue) == 1 {
-		// 1st new queue item must immediately add to next in raw player
+		// 1st new queue item must immediately add to next in raw player.
+		// Mutex is intentionally held here: if this POST + verification fails,
+		// any concurrent songRequestLogic call blocks until we rollback, so it
+		// will then see itself as the new first item and correctly send its own POST.
 		b := echo.Map{
 			"videoId":        song.VideoID,
 			"insertPosition": "INSERT_AFTER_CURRENT_VIDEO",
 		}
 		bb, _ := json.Marshal(b)
 		resp, err := http.Post("http://"+songrequests.GetPearDesktopHost()+"/api/v1/queue", "application/json", bytes.NewBuffer(bb))
+		if resp != nil {
+			resp.Body.Close()
+		}
 		if err != nil || resp.StatusCode != http.StatusNoContent {
 			emsg := "Internal error when adding song to queue"
 			log.Println(emsg, err)
@@ -48,7 +54,7 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, requestedStringIsS
 			return
 		}
 
-		// validate if song was really added
+		// Validate if song was really added.
 		nextInQueueIsAdded := false
 		intervalDelay := time.Second
 		maxRetries := 5
@@ -61,7 +67,7 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, requestedStringIsS
 			}
 		}
 
-		// Notify failed
+		// Notify failed and roll back.
 		if !nextInQueueIsAdded {
 			senderID := a.twitchDataStruct.userID
 			if a.twitchDataStructBot.isAuthenticated {
@@ -72,7 +78,6 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, requestedStringIsS
 				SenderID:      senderID,
 				Message:       "Sorry " + songQueue[0].RequestedBy + " , I failed to add https://youtu.be/" + songQueue[0].Song.VideoID + " next and will be removed from queue.",
 			})
-
 			songQueue = songQueue[1:]
 			return
 		}

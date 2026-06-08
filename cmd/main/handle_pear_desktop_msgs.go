@@ -47,102 +47,118 @@ func (a *App) handlePearDesktopMsgs() {
 				playerInfo.Song = songinfo
 				songQueueMutex.Unlock()
 			case "VIDEO_CHANGED":
+				// songQueueMutex is held for the entire case: we must not allow concurrent
+				// queue mutations (songRequestLogic, !delsong, API delete) to interleave
+				// while we coordinate pear-desktop player state with the internal queue.
 				songQueueMutex.Lock()
+
 				newVideoId := string(v.GetStringBytes("song", "videoId"))
 				playerInfo.Position = v.GetInt("position")
-
-				songinfo := playerSonginfo{
+				playerInfo.Song = playerSonginfo{
 					ImageSrc:         string(v.GetStringBytes("song", "imageSrc")),
 					Artist:           string(v.GetStringBytes("song", "artist")),
 					SongDuration:     v.GetInt("song", "songDuration"),
 					AlternativeTitle: string(v.GetStringBytes("song", "alternativeTitle")),
 					VideoId:          newVideoId,
 				}
-				playerInfo.Song = songinfo
 
-				if len(songQueue) > 0 {
-					queueHead := &songQueue[0]
-					isQueueHeadPlayingNow := queueHead.Song.VideoID == newVideoId
-					if !isQueueHeadPlayingNow {
-						found, allVideoIDCounterparts := helpers.FindAllVideoIDCounterparts(queueHead.Song.VideoID)
+				if len(songQueue) == 0 {
+					songQueueMutex.Unlock()
+					continue
+				}
+
+				// Determine if the queue head is now playing.
+				isQueueHeadPlayingNow := songQueue[0].Song.VideoID == newVideoId
+				if !isQueueHeadPlayingNow {
+					found, allVideoIDCounterparts := helpers.FindAllVideoIDCounterparts(songQueue[0].Song.VideoID)
+					if found {
+						if _, ok := allVideoIDCounterparts[newVideoId]; ok {
+							isQueueHeadPlayingNow = true
+						}
+					}
+				}
+
+				if !isQueueHeadPlayingNow {
+					log.Println("Failed to play next song in queue: " + songQueue[0].Song.Title + " - " + songQueue[0].Song.Artist)
+					log.Println("Make sure it plays next in pear desktop to resume song requests!")
+					songQueueMutex.Unlock()
+					continue
+				}
+
+				// Handle unknown song metadata: fill in live data from pear-desktop.
+				if songQueue[0].Song.IsUnknown {
+					songQueue[0].Song.Artist = string(v.GetStringBytes("song", "artist"))
+					songQueue[0].Song.ImageUrl = string(v.GetStringBytes("song", "imageSrc"))
+					songQueue[0].Song.Title = string(v.GetStringBytes("song", "title"))
+					// Value-copy the head before the queue shifts so the goroutine
+					// doesn't alias into the slice after songQueue[1:].
+					headSnapshot := songQueue[0]
+					go saveSongHistory(&headSnapshot.Song, headSnapshot.RequestedBy, headSnapshot.RequestedByUserID, headSnapshot.IsNinja)
+				}
+
+				// Shift queue and promote the next song.
+				// Lock is held through HTTP calls and polling to prevent any concurrent
+				// mutation from observing or modifying the queue mid-transition.
+				nextInQueueIsAdded := false
+				for !nextInQueueIsAdded {
+					if len(songQueue) == 0 {
+						break
+					}
+					songQueue = songQueue[1:]
+
+					// Broadcast QUEUE_SHIFT to control-panel clients.
+					// clientsMu is safe to acquire here: no code path holds clientsMu
+					// and then tries to acquire songQueueMutex (verified in ws handler).
+					queueInfoOnShift, _ := json.Marshal(echo.Map{
+						"type": "QUEUE_SHIFT",
+					})
+					a.clientsMu.Lock()
+					for ws := range a.clients {
+						websocket.Message.Send(ws, string(queueInfoOnShift))
+					}
+					a.clientsMu.Unlock()
+
+					if len(songQueue) == 0 {
+						break
+					}
+
+					// Post next song to pear desktop.
+					b := echo.Map{
+						"videoId":        songQueue[0].Song.VideoID,
+						"insertPosition": "INSERT_AFTER_CURRENT_VIDEO",
+					}
+					bb, _ := json.Marshal(b)
+					resp, err := http.Post("http://"+songrequests.GetPearDesktopHost()+"/api/v1/queue", "application/json", bytes.NewBuffer(bb))
+					if err != nil || resp.StatusCode != http.StatusNoContent {
+						log.Println("Internal error when adding song to pear desktop", err)
+					}
+					if resp != nil {
+						resp.Body.Close()
+					}
+
+					// Poll to verify the song was actually added.
+					intervalDelay := time.Second
+					maxRetries := 5
+					for range maxRetries {
+						time.Sleep(intervalDelay)
+						found, _ := helpers.FindAllVideoIDCounterparts(songQueue[0].Song.VideoID)
 						if found {
-							if _, ok := allVideoIDCounterparts[newVideoId]; ok {
-								isQueueHeadPlayingNow = true
-							}
+							nextInQueueIsAdded = true
+							break
 						}
 					}
 
-					if isQueueHeadPlayingNow {
-						// handle unknown with this new song detail
-						if queueHead.Song.IsUnknown {
-							// re-fill song details
-							queueHead.Song.Artist = string(v.GetStringBytes("song", "artist"))
-							queueHead.Song.ImageUrl = string(v.GetStringBytes("song", "imageSrc"))
-							queueHead.Song.Title = string(v.GetStringBytes("song", "title"))
-							// save history
-							go saveSongHistory(&queueHead.Song, queueHead.RequestedBy, queueHead.RequestedByUserID, queueHead.IsNinja)
-							// Send frontend for unknown vid update
-							// No info to send because it is already shifted from queue
+					// Notify chat if the song failed to queue, then try the next one.
+					if !nextInQueueIsAdded {
+						senderID := a.twitchDataStruct.userID
+						if a.twitchDataStructBot.isAuthenticated {
+							senderID = a.twitchDataStructBot.userID
 						}
-
-						nextInQueueIsAdded := false
-						for !nextInQueueIsAdded && len(songQueue) > 0 {
-							songQueue = songQueue[1:]
-							queueInfoOnShift, _ := json.Marshal(echo.Map{
-								"type": "QUEUE_SHIFT",
-							})
-							a.clientsMu.Lock()
-							for ws := range a.clients {
-								websocket.Message.Send(ws, string(queueInfoOnShift))
-							}
-							a.clientsMu.Unlock()
-
-							// add next queue head in pear queue
-							if len(songQueue) > 0 {
-								newQueueHead := &songQueue[0]
-								b := echo.Map{
-									"videoId":        newQueueHead.Song.VideoID,
-									"insertPosition": "INSERT_AFTER_CURRENT_VIDEO",
-								}
-								bb, _ := json.Marshal(b)
-								resp, err := http.Post("http://"+songrequests.GetPearDesktopHost()+"/api/v1/queue", "application/json", bytes.NewBuffer(bb))
-								if err != nil || resp.StatusCode != http.StatusNoContent {
-									emsg := "Internal error when adding song to pear desktop"
-									log.Println(emsg, err)
-								}
-
-								// validate if song was really added
-								intervalDelay := time.Second
-
-								maxRetries := 5
-								for range maxRetries {
-									time.Sleep(intervalDelay)
-									found, _ := helpers.FindAllVideoIDCounterparts(newQueueHead.Song.VideoID)
-									if found {
-										nextInQueueIsAdded = true
-										break
-									}
-								}
-
-								// Notify failed
-								if !nextInQueueIsAdded {
-									senderID := a.twitchDataStruct.userID
-									if a.twitchDataStructBot.isAuthenticated {
-										senderID = a.twitchDataStructBot.userID
-									}
-									a.helix.SendChatMessage(&helix.SendChatMessageParams{
-										BroadcasterID: a.twitchDataStruct.userID,
-										SenderID:      senderID,
-										Message:       "Sorry " + newQueueHead.RequestedBy + " , I failed to add https://youtu.be/" + newQueueHead.Song.VideoID + " next and will be removed from queue.",
-									})
-								}
-
-								// Failed to add this song, we go for the one after this one
-							}
-						}
-					} else {
-						log.Println("Failed to play next song in queue: " + queueHead.Song.Title + " - " + queueHead.Song.Artist)
-						log.Println("Make sure it plays next in pear desktop to resume song requests!")
+						a.helix.SendChatMessage(&helix.SendChatMessageParams{
+							BroadcasterID: a.twitchDataStruct.userID,
+							SenderID:      senderID,
+							Message:       "Sorry " + songQueue[0].RequestedBy + " , I failed to add https://youtu.be/" + songQueue[0].Song.VideoID + " next and will be removed from queue.",
+						})
 					}
 				}
 				songQueueMutex.Unlock()

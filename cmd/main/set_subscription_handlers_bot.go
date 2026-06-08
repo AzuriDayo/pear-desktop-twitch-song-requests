@@ -147,10 +147,15 @@ func (a *App) SetSubscriptionHandlersBot() {
 			}
 			hasSkipped := false
 			skipMutex.Lock()
-			if time.Now().After(lastSkipped.Add(time.Second * -10)) {
-				hasSkipped = true
+			if time.Now().After(lastSkipped.Add(time.Second * 10)) {
 				songQueueMutex.Lock()
-				http.Post("http://"+songrequests.GetPearDesktopHost()+"/api/v1/next", "application/json", nil)
+				resp, err := http.Post("http://"+songrequests.GetPearDesktopHost()+"/api/v1/next", "application/json", nil)
+				if err == nil {
+					resp.Body.Close()
+					hasSkipped = resp.StatusCode == 204
+				} else {
+					log.Println("!skip: failed to POST to pear-desktop:", err)
+				}
 				lastSkipped = time.Now()
 				songQueueMutex.Unlock()
 			}
@@ -188,6 +193,7 @@ func (a *App) SetSubscriptionHandlersBot() {
 
 			resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/song")
 			if err == nil {
+				defer resp.Body.Close()
 				bb, err := io.ReadAll(resp.Body)
 				if err == nil {
 					rootErr = json.Unmarshal(bb, &song)
@@ -234,12 +240,19 @@ func (a *App) SetSubscriptionHandlersBot() {
 			lastUsedQueueCmdBot = time.Now()
 			queueCmdMutexBot.Unlock()
 
+			// RLock is held across the http.Get intentionally: we want the songQueue
+			// snapshot we read below to be consistent with the current-song state
+			// fetched from pear-desktop. A concurrent songRequestLogic (which takes
+			// a write Lock) will simply wait until !queue finishes.
 			songQueueMutex.RLock()
 			defer songQueueMutex.RUnlock()
 
 			song := songrequests.SongResult{}
 
 			resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/song")
+			if err == nil {
+				defer resp.Body.Close()
+			}
 			if err != nil {
 				useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
 					BroadcasterID:        event.BroadcasterUserId,
@@ -334,8 +347,8 @@ func (a *App) SetSubscriptionHandlersBot() {
 				return
 			}
 
-			songQueueMutex.RLock()
-			defer songQueueMutex.RUnlock()
+			songQueueMutex.Lock()
+			defer songQueueMutex.Unlock()
 
 			// validate if chatter is the one who requested the song in queue before delete
 			// or validate if permissions >= mod
@@ -375,8 +388,10 @@ func (a *App) SetSubscriptionHandlersBot() {
 					time.Sleep(intervalDelay)
 					found2, videoData := helpers.FindAllVideoIDCounterparts(song.Song.VideoID)
 					found = found2
-					pearIndex = videoData[song.Song.VideoID].Index
-					break
+					if found2 {
+						pearIndex = videoData[song.Song.VideoID].Index
+						break
+					}
 				}
 				if found {
 					req, _ := http.NewRequest(http.MethodDelete, "http://"+songrequests.GetPearDesktopHost()+"/api/v1/queue/"+strconv.Itoa(pearIndex), nil)

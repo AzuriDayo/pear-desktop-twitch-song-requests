@@ -180,11 +180,11 @@ func SearchSong(query string, minLength int, maxLength int) (*SongResult, error)
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	outBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
 
 	rawResults := apiSearchSongResult{}
 	err = json.Unmarshal(outBody, &rawResults)

@@ -41,9 +41,11 @@ func (a *App) handleApiV1QueueDeleteDELETE(c echo.Context) error {
 	// Remove from internal queue
 	songQueue = append(songQueue[:idx], songQueue[idx+1:]...)
 
-	// If the first item was removed, replicate !delsong pear-desktop cleanup
+	// If the first item was removed, replicate !delsong pear-desktop cleanup.
+	// Mutex is intentionally held here: concurrent deletes of idx=0 must be
+	// serialized so the POST of the new head reflects the actual queue state.
 	if idx == 0 {
-		// Try to find and remove the song from pear-desktop player queue
+		// Try to find and remove the song from pear-desktop player queue.
 		intervalDelay := time.Second
 		maxRetries := 3
 		pearIndex := -1
@@ -52,8 +54,10 @@ func (a *App) handleApiV1QueueDeleteDELETE(c echo.Context) error {
 			time.Sleep(intervalDelay)
 			found2, videoData := helpers.FindAllVideoIDCounterparts(song.Song.VideoID)
 			found = found2
-			pearIndex = videoData[song.Song.VideoID].Index
-			break
+			if found2 {
+				pearIndex = videoData[song.Song.VideoID].Index
+				break
+			}
 		}
 		if found {
 			req, _ := http.NewRequest(http.MethodDelete, "http://"+songrequests.GetPearDesktopHost()+"/api/v1/queue/"+strconv.Itoa(pearIndex), nil)
@@ -61,6 +65,9 @@ func (a *App) handleApiV1QueueDeleteDELETE(c echo.Context) error {
 			resp, err := http.DefaultClient.Do(req)
 			if err != nil || resp.StatusCode != http.StatusNoContent {
 				log.Println("delsong API cleanup: Failed to delete song from pear-desktop, proceeding anyway...")
+			}
+			if resp != nil {
+				resp.Body.Close()
 			}
 		}
 		if len(songQueue) > 0 {
@@ -73,6 +80,9 @@ func (a *App) handleApiV1QueueDeleteDELETE(c echo.Context) error {
 			if err != nil || resp.StatusCode != http.StatusNoContent {
 				log.Println("delsong API cleanup: Failed to add next song in queue to pear-desktop. https://youtu.be/" + songQueue[0].Song.VideoID)
 			}
+			if resp != nil {
+				resp.Body.Close()
+			}
 		}
 	}
 
@@ -83,11 +93,11 @@ func (a *App) handleApiV1QueueDeleteDELETE(c echo.Context) error {
 		"type":       "QUEUE_INFO",
 		"song_queue": songQueue,
 	})
-	a.clientsMu.RLock()
+	a.clientsMu.Lock()
 	for ws := range a.clients {
 		websocket.Message.Send(ws, string(queueInfo))
 	}
-	a.clientsMu.RUnlock()
+	a.clientsMu.Unlock()
 
 	return c.NoContent(http.StatusNoContent)
 }

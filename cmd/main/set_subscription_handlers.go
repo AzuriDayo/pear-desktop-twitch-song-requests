@@ -45,19 +45,20 @@ func (a *App) SetSubscriptionHandlers() {
 		isModerator := false
 		isVip := false
 		trimmedText := strings.TrimSpace(event.Message.Text)
-		trimmedText = strings.Trim(event.Message.Text, " ͏") // idk why twitch adds this character
+		trimmedText = strings.Trim(trimmedText, " ͏") // idk why twitch adds this character
 
 		for _, v := range event.Badges {
-			if v.SetId == "subscriber" || v.SetId == "founder" {
-				isSub = true
-			}
 			if v.SetId == "broadcaster" {
 				isBroadcaster = true
 				isModerator = true
 				isSub = true
+				break // broadcaster implies all other roles
 			}
 			if v.SetId == "moderator" || v.SetId == "lead_moderator" {
 				isModerator = true
+				isSub = true
+			}
+			if v.SetId == "subscriber" || v.SetId == "founder" {
 				isSub = true
 			}
 			if v.SetId == "vip" {
@@ -85,7 +86,7 @@ func (a *App) SetSubscriptionHandlers() {
 		}
 
 		log.Printf("Chat message from %s: %s %s\n", event.ChatterUserLogin, trimmedText, event.ChannelPointsCustomRewardId)
-		if (a.songRequestRewardID == event.ChannelPointsCustomRewardId && event.ChannelPointsCustomRewardId != "") || ((isSub || isVip) && len(trimmedText) > 4 && strings.ToLower(trimmedText[:4]) == "!sr ") {
+		if (a.songRequestRewardID == event.ChannelPointsCustomRewardId && event.ChannelPointsCustomRewardId != "") || ((isSub || isVip) && len(trimmedText) > 4 && strings.EqualFold(trimmedText[:4], "!sr ")) {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
@@ -100,9 +101,14 @@ func (a *App) SetSubscriptionHandlers() {
 			hasSkipped := false
 			skipMutex.Lock()
 			if time.Now().After(lastSkipped.Add(time.Second * 10)) {
-				hasSkipped = true
 				songQueueMutex.Lock()
-				http.Post("http://"+songrequests.GetPearDesktopHost()+"/api/v1/next", "application/json", nil)
+				resp, err := http.Post("http://"+songrequests.GetPearDesktopHost()+"/api/v1/next", "application/json", nil)
+				if err == nil {
+					resp.Body.Close()
+					hasSkipped = resp.StatusCode == 204
+				} else {
+					log.Println("!skip: failed to POST to pear-desktop:", err)
+				}
 				lastSkipped = time.Now()
 				songQueueMutex.Unlock()
 			}
@@ -140,6 +146,7 @@ func (a *App) SetSubscriptionHandlers() {
 
 			resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/song")
 			if err == nil {
+				defer resp.Body.Close()
 				bb, err := io.ReadAll(resp.Body)
 				if err == nil {
 					rootErr = json.Unmarshal(bb, &song)
@@ -186,12 +193,19 @@ func (a *App) SetSubscriptionHandlers() {
 			lastUsedQueueCmd = time.Now()
 			queueCmdMutex.Unlock()
 
+			// RLock is held across the http.Get intentionally: we want the songQueue
+			// snapshot we read below to be consistent with the current-song state
+			// fetched from pear-desktop. A concurrent songRequestLogic (which takes
+			// a write Lock) will simply wait until !queue finishes.
 			songQueueMutex.RLock()
 			defer songQueueMutex.RUnlock()
 
 			song := songrequests.SongResult{}
 
 			resp, err := http.Get("http://" + songrequests.GetPearDesktopHost() + "/api/v1/song")
+			if err == nil {
+				defer resp.Body.Close()
+			}
 			if err != nil {
 				useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
 					BroadcasterID:        event.BroadcasterUserId,
@@ -286,8 +300,8 @@ func (a *App) SetSubscriptionHandlers() {
 				return
 			}
 
-			songQueueMutex.RLock()
-			defer songQueueMutex.RUnlock()
+			songQueueMutex.Lock()
+			defer songQueueMutex.Unlock()
 
 			// validate if chatter is the one who requested the song in queue before delete
 			// or validate if permissions >= mod
@@ -327,8 +341,10 @@ func (a *App) SetSubscriptionHandlers() {
 					time.Sleep(intervalDelay)
 					found2, videoData := helpers.FindAllVideoIDCounterparts(song.Song.VideoID)
 					found = found2
-					pearIndex = videoData[song.Song.VideoID].Index
-					break
+					if found2 {
+						pearIndex = videoData[song.Song.VideoID].Index
+						break
+					}
 				}
 				if found {
 					req, _ := http.NewRequest(http.MethodDelete, "http://"+songrequests.GetPearDesktopHost()+"/api/v1/queue/"+strconv.Itoa(pearIndex), nil)
