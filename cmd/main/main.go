@@ -6,6 +6,7 @@ import (
 	"embed"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -253,6 +254,9 @@ func (a *App) Run() error {
 	apiV1Twitch := apiV1.Group("/twitch")
 	apiV1Twitch.GET("/custom-rewards", a.handleApiV1TwitchCustomRewardsGET)
 
+	port := findAvailablePort()
+	controlPanelURL := fmt.Sprintf("http://localhost:%d/", port)
+
 	var cmd string
 	var args []string
 	switch runtime.GOOS {
@@ -264,7 +268,6 @@ func (a *App) Run() error {
 	default: // "linux", "freebsd", "openbsd", "netbsd"
 		cmd = "xdg-open"
 	}
-	controlPanelURL := "http://localhost:3999/"
 	args = append(args, controlPanelURL) // must use localhost here because twitch does not allow 127.0.0.1
 	twitchTokenExpiresSoon := a.twitchDataStruct.isAuthenticated && time.Now().Add(-15*24*time.Hour).After(a.twitchDataStruct.expiresDate)
 	if a.twitchDataStruct.isAuthenticated && twitchTokenExpiresSoon {
@@ -280,7 +283,32 @@ func (a *App) Run() error {
 		time.Sleep(5 * time.Second)
 		log.Println("Friendly reminder, the control panel is available at " + controlPanelURL)
 	}
-	return e.Start(listenIP + ":3999")
+	return e.Start(fmt.Sprintf("%s:%d", listenIP, port))
 }
 
 var listenIP = "127.0.0.1"
+
+func isPortAvailable(port int) bool {
+	ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", listenIP, port))
+	if err != nil {
+		return false
+	}
+	ln.Close()
+	return true
+}
+
+// findAvailablePort tries ports 3999→3000 (decrementing), then 8080→65535 (incrementing).
+func findAvailablePort() int {
+	for port := 3999; port >= 3000; port-- {
+		if isPortAvailable(port) {
+			return port
+		}
+	}
+	for port := 8080; port <= 65535; port++ {
+		if isPortAvailable(port) {
+			return port
+		}
+	}
+	log.Fatal("No available port found")
+	return 0
+}

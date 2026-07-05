@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
-import { useAppDispatch, useAppSelector } from "../../app/hooks";
+import { useAppDispatch } from "../../app/hooks";
 import { handleWsMessages } from "./handleWsMessages";
 
 export function TwitchWS() {
 	const [reconnect, setReconnect] = useState(1);
-	const twitchState = useAppSelector((state) => state.twitchState);
 	const dispatch = useAppDispatch();
 
 	useEffect(() => {
-		const wsUrl = `ws://${twitchState.hostname}/api/v1/ws`;
+		const wsUrl = `ws://${window.location.host}/api/v1/ws`;
 		console.log("Starting Twitch WebSocket...");
 
 		let ws: WebSocket;
@@ -50,7 +49,7 @@ export function TwitchWS() {
 			}
 			if (reconnectTimer !== null) clearTimeout(reconnectTimer);
 		};
-	}, [reconnect, dispatch, twitchState.hostname]);
+	}, [reconnect, dispatch]);
 
 	return <></>;
 }
