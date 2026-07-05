@@ -71,6 +71,17 @@ type App struct {
 	clientsMu               sync.RWMutex
 	clientsBroadcast        chan string
 	songRequestRewardID     string
+	cmdPermissions          map[string]int
+}
+
+// defaultCmdPermissions returns the default minimum permission levels for each command.
+func defaultCmdPermissions() map[string]int {
+	return map[string]int{
+		data.DB_KEY_CMD_PERMISSION_SR:      data.PermissionLevelSubscriber,
+		data.DB_KEY_CMD_PERMISSION_QUEUE:   data.PermissionLevelViewer,
+		data.DB_KEY_CMD_PERMISSION_SONG:    data.PermissionLevelViewer,
+		data.DB_KEY_CMD_PERMISSION_DELSONG: data.PermissionLevelModerator,
+	}
 }
 
 func NewApp() *App {
@@ -98,6 +109,7 @@ func NewApp() *App {
 		clientsMu:               sync.RWMutex{},
 		clients:                 make(map[*websocket.Conn]struct{}),
 		pearDesktopIncomingMsgs: make(chan []byte),
+		cmdPermissions:          defaultCmdPermissions(),
 	}
 }
 
@@ -223,6 +235,7 @@ func (a *App) Run() error {
 
 	apiV1 := e.Group("/api/v1")
 	apiV1.POST("/twitch-oauth", a.handleApiV1TwitchOAuthPOST)
+	apiV1.GET("/settings", a.handleApiV1SettingsGET)
 	apiV1.PATCH("/settings", a.handleApiV1SettingsPATCH)
 	apiV1.GET("/ws", a.handleApiV1WsGET)
 	apiV1.DELETE("/queue/:idx", a.handleApiV1QueueDeleteDELETE)

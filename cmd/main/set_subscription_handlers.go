@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/data"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/helpers"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/songrequests"
 	"github.com/joeyak/go-twitch-eventsub/v3"
@@ -19,6 +20,25 @@ import (
 
 var appMaintainerIDs = map[string]struct{}{
 	"48529336": {}, // AzuriDayo_
+}
+
+// UserMeetsPermission reports whether a user with the given role flags satisfies
+// a minimum permission level (0=broadcaster … 4=viewer/everyone).
+func UserMeetsPermission(level int, isBroadcaster, isModerator, isVip, isSub bool) bool {
+	switch level {
+	case 0: // broadcaster only
+		return isBroadcaster
+	case 1: // moderator or above
+		return isBroadcaster || isModerator
+	case 2: // VIP or above
+		return isBroadcaster || isModerator || isVip
+	case 3: // subscriber or above
+		return isBroadcaster || isModerator || isVip || isSub
+	case 4: // viewer (everyone)
+		return true
+	default:
+		return false
+	}
 }
 
 func (a *App) SetSubscriptionHandlers() {
@@ -86,7 +106,7 @@ func (a *App) SetSubscriptionHandlers() {
 		}
 
 		log.Printf("Chat message from %s: %s %s\n", event.ChatterUserLogin, trimmedText, event.ChannelPointsCustomRewardId)
-		if (a.songRequestRewardID == event.ChannelPointsCustomRewardId && event.ChannelPointsCustomRewardId != "") || ((isSub || isVip) && len(trimmedText) > 4 && strings.EqualFold(trimmedText[:4], "!sr ")) {
+		if (a.songRequestRewardID == event.ChannelPointsCustomRewardId && event.ChannelPointsCustomRewardId != "") || (UserMeetsPermission(a.cmdPermissions[data.DB_KEY_CMD_PERMISSION_SR], isBroadcaster, isModerator, isVip, isSub) && len(trimmedText) > 4 && strings.EqualFold(trimmedText[:4], "!sr ")) {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
@@ -131,6 +151,9 @@ func (a *App) SetSubscriptionHandlers() {
 
 		if strings.EqualFold(trimmedText, "!song") {
 			if !a.streamOnline && !isBroadcaster {
+				return
+			}
+			if !UserMeetsPermission(a.cmdPermissions[data.DB_KEY_CMD_PERMISSION_SONG], isBroadcaster, isModerator, isVip, isSub) {
 				return
 			}
 			failed := false
@@ -183,6 +206,9 @@ func (a *App) SetSubscriptionHandlers() {
 
 		if strings.EqualFold(trimmedText, "!queue") {
 			if !a.streamOnline && !isBroadcaster {
+				return
+			}
+			if !UserMeetsPermission(a.cmdPermissions[data.DB_KEY_CMD_PERMISSION_QUEUE], isBroadcaster, isModerator, isVip, isSub) {
 				return
 			}
 			queueCmdMutex.Lock()
@@ -315,7 +341,8 @@ func (a *App) SetSubscriptionHandlers() {
 				return
 			}
 			song := songQueue[idx]
-			if !(song.RequestedByUserID == event.ChatterUserId || isModerator || isBroadcaster) {
+			// Allow delete if: user meets the delsong permission threshold, OR they are the original requester.
+			if !(song.RequestedByUserID == event.ChatterUserId || UserMeetsPermission(a.cmdPermissions[data.DB_KEY_CMD_PERMISSION_DELSONG], isBroadcaster, isModerator, isVip, isSub)) {
 				// cannot delete song
 				useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
 					BroadcasterID:        event.BroadcasterUserId,

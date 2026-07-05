@@ -1,9 +1,43 @@
 import { Link } from "react-router";
 import { useAppSelector } from "../app/hooks";
 import { useEffect, useState, useCallback } from "react";
+import { defaultCmdPermissions } from "../features/twitchws/twitchSlice";
 
 const urlPath = "/api/v1/settings";
 const method = "PATCH";
+
+const PERMISSION_OPTIONS = [
+	{ value: 0, label: "Broadcaster" },
+	{ value: 1, label: "Moderator" },
+	{ value: 2, label: "VIP" },
+	{ value: 3, label: "Subscriber" },
+	{ value: 4, label: "Viewer (everyone)" },
+];
+
+const CMD_PERMISSION_KEYS = [
+	{
+		key: "cmd_permission_sr",
+		label: "!sr (Song Request)",
+		note: undefined,
+	},
+	{
+		key: "cmd_permission_queue",
+		label: "!queue",
+		note: undefined,
+	},
+	{
+		key: "cmd_permission_song",
+		label: "!song (Now Playing)",
+		note: undefined,
+	},
+	{
+		key: "cmd_permission_delsong",
+		label: "!delsong",
+		note: "The original requester can always delete their own song, regardless of this setting.",
+	},
+] as const;
+
+type CmdPermissionKey = (typeof CMD_PERMISSION_KEYS)[number]["key"];
 
 export function Settings() {
 	const twitchState = useAppSelector((state) => state.twitchState);
@@ -20,6 +54,12 @@ export function Settings() {
 	const [availableRewards, setAvailableRewards] = useState<
 		{ id: string; cost: number; name: string }[]
 	>([]);
+
+	// Permission state — initialise from defaults, then overwrite with server values on load
+	const [permissionValues, setPermissionValues] = useState<Record<CmdPermissionKey, number>>(
+		defaultCmdPermissions as Record<CmdPermissionKey, number>,
+	);
+	const [permissionStatus, setPermissionStatus] = useState("");
 
 	const fetchRewards = useCallback(async () => {
 		setIsRefreshing(true);
@@ -44,6 +84,25 @@ export function Settings() {
 				// silently ignore initial load failures
 			} finally {
 				setIsRefreshing(false);
+			}
+		})();
+	}, []);
+
+	// Load current permission values from the server on mount
+	useEffect(() => {
+		void (async () => {
+			try {
+				const r = await fetch("/api/v1/settings");
+				if (r.ok) {
+					const data = (await r.json()) as {
+						cmd_permissions?: Record<CmdPermissionKey, number>;
+					};
+					if (data.cmd_permissions) {
+						setPermissionValues((prev) => ({ ...prev, ...data.cmd_permissions }));
+					}
+				}
+			} catch {
+				// silently ignore
 			}
 		})();
 	}, []);
@@ -75,6 +134,25 @@ export function Settings() {
 				});
 		}
 	}, [settings]);
+
+	const savePermissions = useCallback(async () => {
+		setPermissionStatus("");
+		const body: Record<string, string> = {};
+		for (const k of Object.keys(permissionValues) as CmdPermissionKey[]) {
+			body[k] = String(permissionValues[k]);
+		}
+		try {
+			const r = await fetch(urlPath, { method, body: JSON.stringify(body) });
+			if (r.status >= 200 && r.status < 300) {
+				setPermissionStatus("Permissions saved successfully!");
+			} else {
+				const msg = (await r.json()) as { error?: string };
+				setPermissionStatus("Save failed: " + (msg.error ?? "unknown error"));
+			}
+		} catch {
+			setPermissionStatus("Network error, please try again.");
+		}
+	}, [permissionValues]);
 
 	return (
 		<>
@@ -141,6 +219,61 @@ export function Settings() {
 				<button type="submit">Save</button>
 			</form>
 			{status && <h3>{status}</h3>}
+			<br />
+
+			{/* ── Command Permissions ─────────────────────────────────────────── */}
+			<hr />
+			<h2>Command Permissions</h2>
+			<p>
+				Set the minimum role required to use each chat command. VIP role is superior to subscribers.
+			</p>
+			<form
+				onSubmit={(e) => {
+					e.preventDefault();
+					void savePermissions();
+				}}
+			>
+				<table style={{ borderSpacing: "12px 8px", borderCollapse: "separate" }}>
+					<tbody>
+						{CMD_PERMISSION_KEYS.map(({ key, label, note }) => (
+							<tr key={key}>
+								<td>
+									<label htmlFor={`perm-${key}`}>
+										<code>{label}</code>
+									</label>
+								</td>
+								<td>
+									<select
+										id={`perm-${key}`}
+										value={permissionValues[key]}
+										onChange={(e) => {
+											setPermissionValues((prev) => ({
+												...prev,
+												[key]: Number(e.target.value),
+											}));
+										}}
+									>
+										{PERMISSION_OPTIONS.map((opt) => (
+											<option key={opt.value} value={opt.value}>
+												{opt.label}
+											</option>
+										))}
+									</select>
+								</td>
+								{note && (
+									<td>
+										<small style={{ color: "#aaa" }}>{note}</small>
+									</td>
+								)}
+							</tr>
+						))}
+					</tbody>
+				</table>
+				<br />
+				<button type="submit">Save Permissions</button>
+			</form>
+			{permissionStatus && <h3>{permissionStatus}</h3>}
+
 			<br />
 			<br />
 			<br />

@@ -6,30 +6,35 @@
 	"scripts": {
 		"dev": "vp dev",
 		"build": " vp check && vp build",
-		"preview": "vp preview"
+		"preview": "vp preview",
+		"test": "vitest run",
+		"test:watch": "vitest"
 	},
 	"dependencies": {
 		"@mui/icons-material": "^7.3.11",
-		"@mui/material": "^7.3.9",
-		"@mui/x-data-grid": "^8.28.1",
+		"@mui/material": "^7.3.11",
+		"@mui/x-data-grid": "^8.28.7",
 		"@reduxjs/toolkit": "^2.12.0",
 		"bootstrap": "5.3.8",
-		"date-fns": "^4.3.0",
-		"react": "^19.2.4",
+		"date-fns": "^4.4.0",
+		"react": "^19.2.7",
 		"react-bootstrap": "^2.10.10",
-		"react-dom": "^19.2.4",
+		"react-dom": "^19.2.7",
 		"react-redux": "^9.3.0",
 		"react-router": "^7.16.0"
 	},
 	"devDependencies": {
 		"@emotion/react": "^11.14.0",
 		"@emotion/styled": "^11.14.1",
+		"@testing-library/jest-dom": "^6.9.1",
+		"@testing-library/react": "^16.3.2",
 		"@testing-library/user-event": "^14.6.1",
-		"@types/react": "^19.2.15",
+		"@types/react": "^19.2.16",
 		"@types/react-dom": "^19.2.3",
 		"@vitejs/plugin-react": "^6.0.2",
-		"jsdom": "^29.0.1",
+		"jsdom": "^29.1.1",
 		"vite": "catalog:",
-		"vite-plus": "catalog:"
+		"vite-plus": "catalog:",
+		"vitest": "catalog:"
 	}
 }

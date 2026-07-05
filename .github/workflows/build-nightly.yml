@@ -19,7 +19,20 @@ jobs:
           touch cmd/main/build/index.html
           go test ./...
 
+  test-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: voidzero-dev/setup-vp@2dec1e33f4ab2c6d5bce1b0c4607961bb1a3f7a1 # v1.1.2
+        with:
+          node-version-file: ".node-version"
+          cache: true
+          run-install: true
+      - shell: bash
+        run: vp test
+
   build-web:
+    needs: test-web
     runs-on: ubuntu-latest
     permissions:
       contents: read

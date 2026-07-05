@@ -1,6 +1,13 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "../../app/store";
 
+export interface CmdPermissions {
+	cmd_permission_sr: number;
+	cmd_permission_queue: number;
+	cmd_permission_song: number;
+	cmd_permission_delsong: number;
+}
+
 // Define a type for the slice state
 export interface ITwitchState {
 	isLoaded: boolean;
@@ -10,7 +17,15 @@ export interface ITwitchState {
 	login: string;
 	expires_in_bot: string;
 	login_bot: string;
+	cmd_permissions: CmdPermissions;
 }
+
+export const defaultCmdPermissions: CmdPermissions = {
+	cmd_permission_sr: 3, // subscriber
+	cmd_permission_queue: 4, // viewer
+	cmd_permission_song: 4, // viewer
+	cmd_permission_delsong: 1, // moderator
+};
 
 const initialState: ITwitchState = {
 	isLoaded: false,
@@ -20,6 +35,7 @@ const initialState: ITwitchState = {
 	login: "",
 	login_bot: "",
 	expires_in_bot: "",
+	cmd_permissions: defaultCmdPermissions,
 };
 
 export const twitchStateSlice = createSlice({
