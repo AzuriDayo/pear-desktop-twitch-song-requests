@@ -52,9 +52,11 @@ func (a *App) SetSubscriptionHandlers() {
 		log.Println("STREAM_ONLINE")
 
 		notifyIfTokenExpired("main", a.twitchDataStruct.accessToken, a.twitchDataStruct.isAuthenticated)
-		notifyIfTokenExpired("bot", a.twitchDataStructBot.accessToken, a.twitchDataStructBot.isAuthenticated)
 		notifyTokenExpiresSoon("main", a.twitchDataStruct.expiresDate, a.twitchDataStruct.isAuthenticated)
-		notifyTokenExpiresSoon("bot", a.twitchDataStructBot.expiresDate, a.twitchDataStructBot.isAuthenticated)
+		if a.twitchDataStructBot.accessToken != "" {
+			notifyIfTokenExpired("bot", a.twitchDataStructBot.accessToken, a.twitchDataStructBot.isAuthenticated)
+			notifyTokenExpiresSoon("bot", a.twitchDataStructBot.expiresDate, a.twitchDataStructBot.isAuthenticated)
+		}
 	})
 	a.twitchWSService.Client().OnEventStreamOffline(func(event twitch.EventStreamOffline) {
 		a.streamOnline = false
