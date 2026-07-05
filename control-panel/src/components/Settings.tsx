@@ -224,7 +224,9 @@ export function Settings() {
 			{/* ── Command Permissions ─────────────────────────────────────────── */}
 			<hr />
 			<h2>Command Permissions</h2>
-			<p>Set the minimum role required to use each chat command.</p>
+			<p>
+				Set the minimum role required to use each chat command. VIP role is superior to subscribers.
+			</p>
 			<form
 				onSubmit={(e) => {
 					e.preventDefault();
