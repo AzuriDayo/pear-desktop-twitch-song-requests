@@ -37,6 +37,8 @@ type twitchData struct {
 }
 
 func main() {
+	acquireSingleInstanceLock()
+	defer releaseSingleInstanceLock()
 	setTitle("Pear Desktop Twitch Song Requests by AzuriDayo_")
 	log.Println("Starting Pear Desktop Twitch Song Requests", version)
 	go checkForUpdates()
