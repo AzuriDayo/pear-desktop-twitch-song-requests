@@ -15,6 +15,7 @@ require (
 	github.com/valyala/fastjson v1.6.10
 	golang.org/x/mod v0.35.0
 	golang.org/x/net v0.55.0
+	gopkg.in/toast.v1 v1.0.0-20180812000517-0a84660828b2
 	modernc.org/sqlite v1.48.0
 )
 
@@ -32,6 +33,7 @@ require (
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/ncruces/go-strftime v1.0.0 // indirect
+	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
