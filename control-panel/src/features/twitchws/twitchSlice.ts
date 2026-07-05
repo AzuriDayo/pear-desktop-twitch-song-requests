@@ -12,7 +12,6 @@ export interface CmdPermissions {
 export interface ITwitchState {
 	isLoaded: boolean;
 	expires_in: string;
-	hostname: string;
 	twitch_song_request_reward_id: string;
 	login: string;
 	expires_in_bot: string;
@@ -30,7 +29,6 @@ export const defaultCmdPermissions: CmdPermissions = {
 const initialState: ITwitchState = {
 	isLoaded: false,
 	expires_in: "",
-	hostname: "127.0.0.1:3999",
 	twitch_song_request_reward_id: "",
 	login: "",
 	login_bot: "",

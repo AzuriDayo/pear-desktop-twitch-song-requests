@@ -5,7 +5,6 @@ import type { ITwitchState } from "./twitchSlice";
 const initialState: ITwitchState = {
 	isLoaded: false,
 	expires_in: "",
-	hostname: "127.0.0.1:3999",
 	twitch_song_request_reward_id: "",
 	login: "",
 	login_bot: "",
