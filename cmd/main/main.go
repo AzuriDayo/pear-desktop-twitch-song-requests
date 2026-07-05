@@ -123,6 +123,11 @@ func (a *App) Run() error {
 		return err
 	}
 
+	notifyIfTokenExpired("main", a.twitchDataStruct.accessToken, a.twitchDataStruct.isAuthenticated)
+	notifyIfTokenExpired("bot", a.twitchDataStructBot.accessToken, a.twitchDataStructBot.isAuthenticated)
+	notifyTokenExpiresSoon("main", a.twitchDataStruct.expiresDate, a.twitchDataStruct.isAuthenticated)
+	notifyTokenExpiresSoon("bot", a.twitchDataStructBot.expiresDate, a.twitchDataStructBot.isAuthenticated)
+
 	// Auto reconnect pear desktop and funnel mesasges to channel
 	log.Println("Pear Desktop WS service starting...")
 	ws := recws.RecConn{
