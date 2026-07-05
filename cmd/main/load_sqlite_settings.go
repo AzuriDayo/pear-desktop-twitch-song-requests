@@ -4,6 +4,7 @@ package main
 import (
 	"errors"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/gen/model"
@@ -29,6 +30,13 @@ func (a *App) loadSqliteSettings() error {
 		return err
 	}
 
+	permissionKeys := map[string]bool{
+		data.DB_KEY_CMD_PERMISSION_SR:      true,
+		data.DB_KEY_CMD_PERMISSION_QUEUE:   true,
+		data.DB_KEY_CMD_PERMISSION_SONG:    true,
+		data.DB_KEY_CMD_PERMISSION_DELSONG: true,
+	}
+
 	for _, result := range results {
 		if result.Key == data.DB_KEY_TWITCH_ACCESS_TOKEN {
 			a.twitchDataStruct.accessToken = result.Value
@@ -38,6 +46,11 @@ func (a *App) loadSqliteSettings() error {
 		}
 		if result.Key == data.DB_KEY_TWITCH_ACCESS_TOKEN_BOT {
 			a.twitchDataStructBot.accessToken = result.Value
+		}
+		if permissionKeys[result.Key] {
+			if v, err := strconv.Atoi(result.Value); err == nil && v >= data.PermissionLevelBroadcaster && v <= data.PermissionLevelViewer {
+				a.cmdPermissions[result.Key] = v
+			}
 		}
 	}
 

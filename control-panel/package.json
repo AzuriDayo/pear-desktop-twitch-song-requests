@@ -6,7 +6,9 @@
 	"scripts": {
 		"dev": "vp dev",
 		"build": " vp check && vp build",
-		"preview": "vp preview"
+		"preview": "vp preview",
+		"test": "vitest run",
+		"test:watch": "vitest"
 	},
 	"dependencies": {
 		"@mui/icons-material": "^7.3.11",
@@ -24,12 +26,15 @@
 	"devDependencies": {
 		"@emotion/react": "^11.14.0",
 		"@emotion/styled": "^11.14.1",
+		"@testing-library/jest-dom": "^6.6.3",
+		"@testing-library/react": "^16.3.0",
 		"@testing-library/user-event": "^14.6.1",
 		"@types/react": "^19.2.15",
 		"@types/react-dom": "^19.2.3",
 		"@vitejs/plugin-react": "^6.0.2",
 		"jsdom": "^29.0.1",
 		"vite": "catalog:",
-		"vite-plus": "catalog:"
+		"vite-plus": "catalog:",
+		"vitest": "catalog:"
 	}
 }

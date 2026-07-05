@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/data"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/helpers"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/songrequests"
 	"github.com/joeyak/go-twitch-eventsub/v3"
@@ -133,7 +134,7 @@ func (a *App) SetSubscriptionHandlersBot() {
 			isModerator = true
 		}
 
-		if (isSub || isVip) && len(trimmedText) > 4 && strings.EqualFold(trimmedText[:4], "!sr ") {
+		if UserMeetsPermission(a.cmdPermissions[data.DB_KEY_CMD_PERMISSION_SR], isBroadcaster, isModerator, isVip, isSub) && len(trimmedText) > 4 && strings.EqualFold(trimmedText[:4], "!sr ") {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
@@ -178,6 +179,9 @@ func (a *App) SetSubscriptionHandlersBot() {
 
 		if strings.EqualFold(trimmedText, "!song") {
 			if !a.streamOnline && !isBroadcaster {
+				return
+			}
+			if !UserMeetsPermission(a.cmdPermissions[data.DB_KEY_CMD_PERMISSION_SONG], isBroadcaster, isModerator, isVip, isSub) {
 				return
 			}
 			failed := false
@@ -230,6 +234,9 @@ func (a *App) SetSubscriptionHandlersBot() {
 
 		if strings.EqualFold(trimmedText, "!queue") {
 			if !a.streamOnline && !isBroadcaster {
+				return
+			}
+			if !UserMeetsPermission(a.cmdPermissions[data.DB_KEY_CMD_PERMISSION_QUEUE], isBroadcaster, isModerator, isVip, isSub) {
 				return
 			}
 			queueCmdMutexBot.Lock()
@@ -362,7 +369,8 @@ func (a *App) SetSubscriptionHandlersBot() {
 				return
 			}
 			song := songQueue[idx]
-			if !(song.RequestedByUserID == event.ChatterUserId || isModerator || isBroadcaster) {
+			// Allow delete if: user meets the delsong permission threshold, OR they are the original requester.
+			if !(song.RequestedByUserID == event.ChatterUserId || UserMeetsPermission(a.cmdPermissions[data.DB_KEY_CMD_PERMISSION_DELSONG], isBroadcaster, isModerator, isVip, isSub)) {
 				// cannot delete song
 				useProperHelix.SendChatMessage(&helix.SendChatMessageParams{
 					BroadcasterID:        event.BroadcasterUserId,
