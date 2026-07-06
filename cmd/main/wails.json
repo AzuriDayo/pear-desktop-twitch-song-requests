@@ -1,0 +1,19 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "pear-desktop-twitch-song-requests",
+  "outputfilename": "pear-desktop-twitch-song-requests",
+  "frontend:dir": "../../control-panel",
+  "frontend:install": "node ../scripts/wails-frontend-install.mjs",
+  "frontend:build": "node ../scripts/wails-frontend-build.mjs",
+  "frontend:dev:watcher": "vp dev",
+  "frontend:dev:serverUrl": "auto",
+  "assetdir": "frontend",
+  "wailsjsdir": "../../control-panel/src",
+  "info": {
+    "companyName": "AzuriDayo_",
+    "productName": "Pear Desktop Twitch Song Requests",
+    "productVersion": "1.0.0",
+    "copyright": "Copyright © 2026 AzuriDayo_",
+    "comments": "Twitch song requests companion for Pear Desktop"
+  }
+}

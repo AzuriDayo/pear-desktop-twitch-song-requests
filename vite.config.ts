@@ -1,12 +1,17 @@
 import { defineConfig } from "vite-plus";
 
-const projectSpecificIgnores = ["*.json", "pear-api-queue.mts", "pear-api-queue-search-songs.mts"];
+const projectSpecificIgnores = [
+	"*.json",
+	"pear-api-queue.mts",
+	"pear-api-queue-search-songs.mts",
+	"**/wailsjs/**",
+];
 
 export default defineConfig({
 	run: {
 		tasks: {
 			build: {
-				command: ["vp check", "vp build"],
+				command: ["vp check", "vp build", "node ../scripts/copy-wails-frontend.mjs"],
 				cache: true,
 				cwd: "control-panel",
 				output: ["build"],

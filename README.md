@@ -5,9 +5,9 @@ This app adds song requests functionality to your Pear Desktop Music App!
 # Streamers' instructions
 
 1. Download the [latest](https://github.com/AzuriDayo/pear-desktop-twitch-song-requests/releases/latest) release, it is a portable executable.
-2. Run the application. (Note: This app uses the port `3999` listening on `127.0.0.1` or `localhost`)
-3. Once running, connect your Twitch account, and optionally your bot Twitch account if you want a separate user to reply to bot commands.
-4. Naviate to the `Configure settings` page and change the Twitch Custom Reward to integrate the bot with Channel Points Redemptions. Once selected, don't forget to press `Save`.
+2. Run the application and click **Login** to connect your Twitch account. The app opens your browser and captures the token on `http://localhost:3999/oauth/twitch` (register that URL in the [Twitch Developer Console](https://dev.twitch.tv/console)). No client secret is required. Re-login before the access token expires (~4 hours); implicit login does not provide refresh tokens.
+3. Optionally connect a separate bot Twitch account if you want a different user to reply to chat commands.
+4. Navigate to the `Configure settings` page and change the Twitch Custom Reward to integrate the bot with Channel Points Redemptions. Once selected, don't forget to press `Save`.
 5. Make sure your Pear Desktop is running, and enable the API Server plugin.
 6. After enabling the API Server plugin, change the plugin setting for `Authorization stategy` to `No authorization`. (Note: The bot software uses the default port `26538` to connect to this API Server.)
 

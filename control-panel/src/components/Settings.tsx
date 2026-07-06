@@ -2,9 +2,7 @@ import { Link } from "react-router";
 import { useAppSelector } from "../app/hooks";
 import { useEffect, useState, useCallback } from "react";
 import { defaultCmdPermissions } from "../features/twitchws/twitchSlice";
-
-const urlPath = "/api/v1/settings";
-const method = "PATCH";
+import { GetSettings, GetTwitchCustomRewards, SaveSettings } from "../wailsjs/go/main/App";
 
 const PERMISSION_OPTIONS = [
 	{ value: 0, label: "Broadcaster" },
@@ -65,8 +63,7 @@ export function Settings() {
 		setIsRefreshing(true);
 		setStatus("");
 		try {
-			const r = await fetch("/api/v1/twitch/custom-rewards");
-			setAvailableRewards(await r.json());
+			setAvailableRewards(await GetTwitchCustomRewards());
 		} catch {
 			setStatus("Failed to refresh, try again later");
 		} finally {
@@ -78,8 +75,7 @@ export function Settings() {
 		void (async () => {
 			setIsRefreshing(true);
 			try {
-				const r = await fetch("/api/v1/twitch/custom-rewards");
-				setAvailableRewards(await r.json());
+				setAvailableRewards(await GetTwitchCustomRewards());
 			} catch {
 				// silently ignore initial load failures
 			} finally {
@@ -88,18 +84,16 @@ export function Settings() {
 		})();
 	}, []);
 
-	// Load current permission values from the server on mount
+	// Load current permission values from the backend on mount
 	useEffect(() => {
 		void (async () => {
 			try {
-				const r = await fetch("/api/v1/settings");
-				if (r.ok) {
-					const data = (await r.json()) as {
-						cmd_permissions?: Record<CmdPermissionKey, number>;
-					};
-					if (data.cmd_permissions) {
-						setPermissionValues((prev) => ({ ...prev, ...data.cmd_permissions }));
-					}
+				const data = await GetSettings();
+				if (data.cmd_permissions) {
+					setPermissionValues((prev) => ({
+						...prev,
+						...(data.cmd_permissions as Record<CmdPermissionKey, number>),
+					}));
 				}
 			} catch {
 				// silently ignore
@@ -109,28 +103,13 @@ export function Settings() {
 
 	useEffect(() => {
 		if (Object.keys(settings).length > 0) {
-			void fetch(urlPath, {
-				method,
-				body: JSON.stringify(settings),
-			})
-				.then((response) => {
-					if (response.status >= 200 && response.status < 300) {
-						setStatus("Settings saved successfully!");
-						setSettings({});
-						return Promise.resolve("");
-					}
-					return response.text();
+			void SaveSettings(settings)
+				.then(() => {
+					setStatus("Settings saved successfully!");
+					setSettings({});
 				})
-				.then((text) => {
-					if (text == "") return;
-					try {
-						if (text != "") {
-							const msg: { error?: string } = JSON.parse(text);
-							setStatus("Settings save failed with error: " + (msg.error ?? ""));
-						}
-					} catch (e) {
-						console.log(e);
-					}
+				.catch((e: unknown) => {
+					setStatus("Settings save failed with error: " + String(e));
 				});
 		}
 	}, [settings]);
@@ -142,15 +121,10 @@ export function Settings() {
 			body[k] = String(permissionValues[k]);
 		}
 		try {
-			const r = await fetch(urlPath, { method, body: JSON.stringify(body) });
-			if (r.status >= 200 && r.status < 300) {
-				setPermissionStatus("Permissions saved successfully!");
-			} else {
-				const msg = (await r.json()) as { error?: string };
-				setPermissionStatus("Save failed: " + (msg.error ?? "unknown error"));
-			}
-		} catch {
-			setPermissionStatus("Network error, please try again.");
+			await SaveSettings(body);
+			setPermissionStatus("Permissions saved successfully!");
+		} catch (e: unknown) {
+			setPermissionStatus("Save failed: " + String(e));
 		}
 	}, [permissionValues]);
 

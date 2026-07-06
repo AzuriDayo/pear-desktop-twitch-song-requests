@@ -1,30 +1,19 @@
 #!/bin/bash
 set -ex
 
+# Wails v2 uses native WebViews and CGO, so cross-compilation is not supported:
+# this script builds the desktop app for the HOST platform only. CI builds every
+# platform on its own native runner (see .github/workflows/).
+
 if [ "$GIT_SHORT_TAG" = '' ]; then
-    false
+    GIT_SHORT_TAG="v0.0.0+$(git rev-parse --short HEAD)"
 fi
 
-appname=pear-desktop-twitch-song-requests
-archfname=(amd64 arm64)
-osfname=(linux windows darwin)
+cd "$(git rev-parse --show-toplevel)"
 
-go mod download
+# Build the frontend and copy it into the Go embed directory.
+vp run build
 
-for os in "${osfname[@]}"; do
-    for arch in "${archfname[@]}"; do
-        execname=${appname}_${os}_${arch}
-        if [ "$os" = 'windows' ] && [ "$arch" = 'arm64' ]; then
-            execname=${appname}_${os}_on_arm.exe
-        elif [ "$os" = 'windows' ] && [ "$arch" = 'amd64' ]; then
-            execname=${appname}_${os}_x64.exe
-        elif [ "$os" = 'darwin' ] && [ "$arch" = 'arm64' ]; then
-            execname=${appname}_macos_apple_silicon
-        elif [ "$os" = 'darwin' ] && [ "$arch" = 'amd64' ]; then
-            execname=${appname}_macos_intel
-        fi
-        CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -ldflags="-s -w -X main.version=${GIT_SHORT_TAG}" -trimpath -o "$execname" ./cmd/main &
-    done
-done
-
-wait
+# Build the desktop app for the host platform (output in cmd/main/build/bin).
+cd cmd/main
+wails build -s -skipbindings -m -trimpath -ldflags "-X main.version=${GIT_SHORT_TAG}"

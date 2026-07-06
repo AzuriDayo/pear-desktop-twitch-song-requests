@@ -2,6 +2,7 @@ import Paper from "@mui/material/Paper";
 
 import { useEffect, useState, useCallback } from "react";
 import { DataGrid, type GridRenderCellParams, type GridColDef } from "@mui/x-data-grid";
+import { GetRequestersHistory } from "../../wailsjs/go/main/App";
 
 interface IRequesterData {
 	video_id: string;
@@ -84,9 +85,8 @@ const History = () => {
 	const fetchDataFromServer = useCallback(async (page: number, pageSize: number) => {
 		setLoading(true);
 		try {
-			const response = await fetch(`/api/v1/requesters/history?page=${page}&perPage=${pageSize}`);
-			const data = await response.json();
-			setRows(data.items);
+			const data = await GetRequestersHistory(page, pageSize);
+			setRows((data.items ?? []) as unknown as never[]);
 			setRowCount(data.max_results);
 		} catch (e) {
 			console.error("Failed to load history", e);

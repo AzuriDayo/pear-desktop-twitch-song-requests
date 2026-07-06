@@ -21,7 +21,6 @@ const getExpiryStateEmoji = (state: EExpiryState): string => {
 };
 
 type EExpiryState = (typeof expiryState)[keyof typeof expiryState];
-// type TExpiryState = keyof typeof expiryState;
 
 function computeExpiryState(expiresIn: string): EExpiryState {
 	if (expiresIn === "") return expiryState.OK;
@@ -37,17 +36,61 @@ function computeExpiryState(expiresIn: string): EExpiryState {
 	return expiryState.OK;
 }
 
+function renderTwitchAccountStatus(
+	login: string,
+	accessExpiry: string,
+	refreshExpiry: string,
+	accessExpiryState: EExpiryState,
+	refreshExpiryState: EExpiryState,
+	notConfiguredLabel: string,
+) {
+	if (login === "" && accessExpiry === "" && refreshExpiry === "") {
+		return <h3>{notConfiguredLabel}</h3>;
+	}
+
+	// Device-code flow: refresh token present — show re-auth deadline only.
+	if (refreshExpiry !== "") {
+		return (
+			<h3>
+				Twitch connected as {login} — re-authenticate by {refreshExpiry} (30-day inactivity limit){" "}
+				{getExpiryStateEmoji(refreshExpiryState)}
+			</h3>
+		);
+	}
+
+	// Legacy implicit grant: no refresh token — show access token expiry.
+	if (accessExpiry !== "") {
+		return (
+			<h3>
+				Twitch token for {login} expires on {accessExpiry} {getExpiryStateEmoji(accessExpiryState)}
+			</h3>
+		);
+	}
+
+	return <h3>Twitch connected as {login}</h3>;
+}
+
 export function Home() {
 	const twitchState = useAppSelector((state) => state.twitchState);
 
-	const userExpiryState = useMemo(
+	const userAccessExpiryState = useMemo(
 		() => computeExpiryState(twitchState.expires_in),
 		[twitchState.expires_in],
 	);
 
-	const botExpiryState = useMemo(
+	const botAccessExpiryState = useMemo(
 		() => computeExpiryState(twitchState.expires_in_bot),
 		[twitchState.expires_in_bot],
+	);
+
+	const userRefreshExpiryState = useMemo(
+		() => computeExpiryState(twitchState.refresh_expires_in),
+		[twitchState.refresh_expires_in],
+	);
+
+	const botRefreshExpiryState = useMemo(
+		() => computeExpiryState(twitchState.refresh_expires_in_bot),
+		[twitchState.refresh_expires_in_bot],
 	);
 
 	return twitchState.isLoaded ? (
@@ -57,32 +100,28 @@ export function Home() {
 			<br />
 			<br />
 			<Link to="/oauth/twitch-connect">
-				{twitchState.login !== "" ? "Refresh Twitch token" : "Connect with twitch"}
+				{twitchState.login !== "" ? "Re-login with Twitch" : "Login with Twitch"}
 			</Link>
-			<h3>
-				{twitchState.expires_in == ""
-					? "No Twitch token configured"
-					: "Twitch token for " +
-						twitchState.login +
-						" expires on " +
-						twitchState.expires_in +
-						" " +
-						getExpiryStateEmoji(userExpiryState)}
-			</h3>
+			{renderTwitchAccountStatus(
+				twitchState.login,
+				twitchState.expires_in,
+				twitchState.refresh_expires_in,
+				userAccessExpiryState,
+				userRefreshExpiryState,
+				"No Twitch token configured",
+			)}
 			<br />
 			<Link to="/oauth/twitch-connect-bot">
-				{twitchState.login_bot !== "" ? "Refresh Twitch bot token" : "Connect twitch bot account"}
+				{twitchState.login_bot !== "" ? "Re-login Twitch bot" : "Login Twitch bot account"}
 			</Link>
-			<h3>
-				{twitchState.expires_in_bot == ""
-					? "No bot Twitch token configured"
-					: "Twitch token for " +
-						twitchState.login_bot +
-						" expires on " +
-						twitchState.expires_in_bot +
-						" " +
-						getExpiryStateEmoji(botExpiryState)}
-			</h3>
+			{renderTwitchAccountStatus(
+				twitchState.login_bot,
+				twitchState.expires_in_bot,
+				twitchState.refresh_expires_in_bot,
+				botAccessExpiryState,
+				botRefreshExpiryState,
+				"No bot Twitch token configured",
+			)}
 			<br />
 			<br />
 			<br />

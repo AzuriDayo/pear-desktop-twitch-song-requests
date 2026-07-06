@@ -9,10 +9,8 @@ import (
 
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/helpers"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/songrequests"
-	"github.com/labstack/echo/v4"
 	"github.com/nicklaw5/helix/v2"
 	"github.com/valyala/fastjson"
-	"golang.org/x/net/websocket"
 )
 
 func (a *App) handlePearDesktopMsgs() {
@@ -106,24 +104,15 @@ func (a *App) handlePearDesktopMsgs() {
 					}
 					songQueue = songQueue[1:]
 
-					// Broadcast QUEUE_SHIFT to control-panel clients.
-					// clientsMu is safe to acquire here: no code path holds clientsMu
-					// and then tries to acquire songQueueMutex (verified in ws handler).
-					queueInfoOnShift, _ := json.Marshal(echo.Map{
-						"type": "QUEUE_SHIFT",
-					})
-					a.clientsMu.Lock()
-					for ws := range a.clients {
-						websocket.Message.Send(ws, string(queueInfoOnShift))
-					}
-					a.clientsMu.Unlock()
+					// Notify control-panel that the queue shifted.
+					a.emit("QUEUE_SHIFT", nil)
 
 					if len(songQueue) == 0 {
 						break
 					}
 
 					// Post next song to pear desktop.
-					b := echo.Map{
+					b := map[string]any{
 						"videoId":        songQueue[0].Song.VideoID,
 						"insertPosition": "INSERT_AFTER_CURRENT_VIDEO",
 					}

@@ -7,8 +7,6 @@ import (
 	"time"
 )
 
-// notifyTokenExpiresSoon logs a warning if the given Twitch token is
-// authenticated and expires within 7 days.
 func notifyTokenExpiresSoon(account string, expiresDate time.Time, isAuthenticated bool) {
 	if !isAuthenticated {
 		return
@@ -17,14 +15,27 @@ func notifyTokenExpiresSoon(account string, expiresDate time.Time, isAuthenticat
 		return
 	}
 	days := int(time.Until(expiresDate).Hours() / 24)
-	log.Printf("ALERT! %s Twitch token expires in %d day(s). Consider refreshing the token at http://localhost:3999/", account, days)
+	log.Printf("ALERT! %s Twitch token expires in %d day(s). Re-authenticate in the app.", account, days)
 }
 
-// notifyIfTokenExpired logs a warning if a token was stored previously but is
-// no longer valid (expired since last use).
 func notifyIfTokenExpired(account string, accessToken string, isAuthenticated bool) {
 	if accessToken == "" || isAuthenticated {
 		return
 	}
-	log.Printf("ALERT! %s Twitch token has expired. Re-authenticate at http://localhost:3999/", account)
+	log.Printf("ALERT! %s Twitch token has expired. Re-authenticate in the app.", account)
+}
+
+func notifyRefreshTokenExpiresSoon(account string, lastUsed time.Time, refreshToken string) {
+	if refreshToken == "" || lastUsed.IsZero() {
+		return
+	}
+	expiresAt := refreshTokenExpiresAt(lastUsed)
+	if !time.Now().Add(twitchRefreshTokenWarnBefore).After(expiresAt) {
+		return
+	}
+	days := int(time.Until(expiresAt).Hours() / 24)
+	if days < 0 {
+		days = 0
+	}
+	log.Printf("ALERT! %s Twitch refresh token inactive limit reached in %d day(s). Re-authenticate in the app.", account, days)
 }

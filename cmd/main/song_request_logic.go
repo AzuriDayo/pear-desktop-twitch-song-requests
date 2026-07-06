@@ -11,9 +11,7 @@ import (
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/helpers"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/songrequests"
 	"github.com/joeyak/go-twitch-eventsub/v3"
-	"github.com/labstack/echo/v4"
 	"github.com/nicklaw5/helix/v2"
-	"golang.org/x/net/websocket"
 )
 
 func (a *App) songRequestLogic(song *songrequests.SongResult, requestedStringIsSameVideoID bool, event twitch.EventChannelChatMessage, properUserID string, useProperHelix *helix.Client) {
@@ -33,7 +31,7 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, requestedStringIsS
 		// Mutex is intentionally held here: if this POST + verification fails,
 		// any concurrent songRequestLogic call blocks until we rollback, so it
 		// will then see itself as the new first item and correctly send its own POST.
-		b := echo.Map{
+		b := map[string]any{
 			"videoId":        song.VideoID,
 			"insertPosition": "INSERT_AFTER_CURRENT_VIDEO",
 		}
@@ -83,16 +81,8 @@ func (a *App) songRequestLogic(song *songrequests.SongResult, requestedStringIsS
 		}
 	}
 
-	// Broadcast song added to queue to browser control panel
-	queueInfoOnAdd, _ := json.Marshal(echo.Map{
-		"type": "QUEUE_ADD",
-		"song": songQueueItem,
-	})
-	a.clientsMu.Lock()
-	for ws := range a.clients {
-		websocket.Message.Send(ws, string(queueInfoOnAdd))
-	}
-	a.clientsMu.Unlock()
+	// Notify control-panel that a song was added to the queue.
+	a.emit("QUEUE_ADD", songQueueItem)
 
 	// save to history
 	if !song.IsUnknown {

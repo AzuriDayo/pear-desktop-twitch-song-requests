@@ -1,55 +1,65 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useAppDispatch } from "../../app/hooks";
-import { handleWsMessages } from "./handleWsMessages";
+import { setTwitchInfo } from "./twitchSlice";
+import { addSong, setQueueInfo, shiftQueue, type SongQueueItem } from "./songQueueSlice";
+import { EventsOn } from "../../wailsjs/runtime/runtime";
+import { GetQueue, GetTwitchInfo } from "../../wailsjs/go/main/App";
+
+interface TwitchInfoEvent {
+	expiry_date: string;
+	reward_id: string;
+	login: string;
+	login_bot: string;
+	expiry_date_bot: string;
+	refresh_expiry_date: string;
+	refresh_expiry_date_bot: string;
+}
 
 export function TwitchWS() {
-	const [reconnect, setReconnect] = useState(1);
 	const dispatch = useAppDispatch();
 
 	useEffect(() => {
-		const wsUrl = `ws://${window.location.host}/api/v1/ws`;
-		console.log("Starting Twitch WebSocket...");
-
-		let ws: WebSocket;
-		try {
-			ws = new WebSocket(wsUrl);
-		} catch (err) {
-			console.error("Failed to create WebSocket connection:", err);
-			console.log("Attempting to re-connect to Twitch in 3s..");
-			const timer = setTimeout(() => setReconnect((c) => c + 1), 3000);
-			return () => clearTimeout(timer);
-		}
-
-		ws.onopen = () => {
-			console.log("Twitch WebSocket connected for app updates");
+		const applyTwitchInfo = (info: TwitchInfoEvent) => {
+			dispatch(
+				setTwitchInfo({
+					expires_in: info.expiry_date,
+					twitch_song_request_reward_id: info.reward_id,
+					login: info.login,
+					login_bot: info.login_bot,
+					expires_in_bot: info.expiry_date_bot,
+					refresh_expires_in: info.refresh_expiry_date,
+					refresh_expires_in_bot: info.refresh_expiry_date_bot,
+				}),
+			);
 		};
 
-		ws.onmessage = (event) => {
-			if (event.type === "message") {
-				handleWsMessages(event.data as string, dispatch);
-			} else {
-				console.log("TWITCH_WS bin_data", event);
-			}
-		};
+		// Seed initial state (replaces the push previously sent on websocket connect).
+		void GetTwitchInfo().then(applyTwitchInfo);
+		void GetQueue().then((q) => {
+			dispatch(setQueueInfo({ song_queue: (q as unknown as SongQueueItem[]) ?? [] }));
+		});
 
-		ws.onerror = (error) => {
-			console.error("WebSocket error:", error);
-		};
-
-		let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-		ws.onclose = () => {
-			console.log("Connection Closed, will reconnect in 3s...");
-			reconnectTimer = setTimeout(() => setReconnect((c) => c + 1), 3000);
-		};
+		// Live updates are delivered via the Wails runtime event system.
+		const offTwitchInfo = EventsOn("TWITCH_INFO", (info: TwitchInfoEvent) => {
+			applyTwitchInfo(info);
+		});
+		const offQueueInfo = EventsOn("QUEUE_INFO", (payload: { song_queue: SongQueueItem[] }) => {
+			dispatch(setQueueInfo({ song_queue: payload.song_queue ?? [] }));
+		});
+		const offQueueAdd = EventsOn("QUEUE_ADD", (song: SongQueueItem) => {
+			dispatch(addSong({ song }));
+		});
+		const offQueueShift = EventsOn("QUEUE_SHIFT", () => {
+			dispatch(shiftQueue());
+		});
 
 		return () => {
-			ws.onclose = null;
-			if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
-				ws.close();
-			}
-			if (reconnectTimer !== null) clearTimeout(reconnectTimer);
+			offTwitchInfo();
+			offQueueInfo();
+			offQueueAdd();
+			offQueueShift();
 		};
-	}, [reconnect, dispatch]);
+	}, [dispatch]);
 
 	return <></>;
 }

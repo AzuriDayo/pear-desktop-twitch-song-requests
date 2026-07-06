@@ -16,6 +16,8 @@ export interface ITwitchState {
 	login: string;
 	expires_in_bot: string;
 	login_bot: string;
+	refresh_expires_in: string;
+	refresh_expires_in_bot: string;
 	cmd_permissions: CmdPermissions;
 }
 
@@ -33,6 +35,8 @@ const initialState: ITwitchState = {
 	login: "",
 	login_bot: "",
 	expires_in_bot: "",
+	refresh_expires_in: "",
+	refresh_expires_in_bot: "",
 	cmd_permissions: defaultCmdPermissions,
 };
 

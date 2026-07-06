@@ -43,7 +43,7 @@ func main() {
 
 	c, _ := helix.NewClient(&helix.Options{
 		// ClientID: data.GetTwitchClientID(),
-		ClientID: "771pv6m10b4nwaytvk48b7m192y2iu",
+		ClientID: "7k7nl6w8e0owouonj7nb9g3k5s6gs5",
 	})
 
 	b, _, _ := c.ValidateToken(secret)

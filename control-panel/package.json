@@ -5,7 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vp dev",
-		"build": " vp check && vp build",
+		"build": "vp check && vp build",
 		"preview": "vp preview",
 		"test": "vitest run",
 		"test:watch": "vitest"

@@ -1,41 +1,37 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"embed"
-	"fmt"
 	"log"
-	"net"
-	"net/http"
-	"os"
-	"os/exec"
-	"os/signal"
-	"runtime"
-	"sync"
-	"syscall"
 	"time"
 
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/appservices"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/data"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/helpers"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/songrequests"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
 	"github.com/nicklaw5/helix/v2"
 	"github.com/recws-org/recws"
-	"golang.org/x/net/websocket"
+	"github.com/wailsapp/wails/v2"
+	"github.com/wailsapp/wails/v2/pkg/options"
+	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 var version = "development"
 
 type twitchData struct {
-	accessToken     string
-	login           string
-	userID          string
-	isAuthenticated bool
-	expiresDate     time.Time
+	accessToken            string
+	refreshToken           string
+	refreshTokenLastUsedAt time.Time
+	login                  string
+	userID                 string
+	isAuthenticated        bool
+	expiresDate            time.Time
 }
+
+//go:embed all:frontend
+var assets embed.FS
 
 func main() {
 	acquireSingleInstanceLock()
@@ -44,19 +40,25 @@ func main() {
 	log.Println("Starting Pear Desktop Twitch Song Requests", version)
 	go checkForUpdates()
 
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	helpers.PreflightTest()
 	app := NewApp()
 
-	go func() {
-		log.Println(app.Run())
-	}()
-	<-sigs
-	app.cancel()
-
-	fmt.Print("Press 'Enter' to continue...")
-	bufio.NewReader(os.Stdin).ReadBytes('\n')
+	err := wails.Run(&options.App{
+		Title:  "Pear Desktop Twitch Song Requests",
+		Width:  1024,
+		Height: 768,
+		AssetServer: &assetserver.Options{
+			Assets: assets,
+		},
+		OnStartup:  app.startup,
+		OnShutdown: app.shutdown,
+		Bind: []interface{}{
+			app,
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 type App struct {
@@ -70,9 +72,7 @@ type App struct {
 	pearDesktopIncomingMsgs chan []byte
 	ctx                     context.Context
 	cancel                  context.CancelFunc
-	clients                 map[*websocket.Conn]struct{}
-	clientsMu               sync.RWMutex
-	clientsBroadcast        chan string
+	wailsCtx                context.Context
 	songRequestRewardID     string
 	cmdPermissions          map[string]int
 }
@@ -108,18 +108,39 @@ func NewApp() *App {
 		cancel:                  cancel,
 		helix:                   c,
 		helixBot:                c2,
-		clientsBroadcast:        make(chan string),
-		clientsMu:               sync.RWMutex{},
-		clients:                 make(map[*websocket.Conn]struct{}),
 		pearDesktopIncomingMsgs: make(chan []byte),
 		cmdPermissions:          defaultCmdPermissions(),
 	}
 }
 
-//go:embed build/*
-var staticControlPanelFS embed.FS
+// startup is invoked by Wails once the window is created. It stores the Wails
+// context (needed for runtime.EventsEmit) and kicks off all background services.
+func (a *App) startup(ctx context.Context) {
+	a.wailsCtx = ctx
+	go func() {
+		if err := a.runBackground(); err != nil {
+			log.Println("background services error:", err)
+		}
+	}()
+}
 
-func (a *App) Run() error {
+// shutdown is invoked by Wails when the application is about to quit.
+func (a *App) shutdown(ctx context.Context) {
+	a.cancel()
+}
+
+// emit is a thin wrapper around wails runtime EventsEmit that is safe to call
+// before the Wails context is ready (events are simply dropped in that case).
+func (a *App) emit(eventName string, optionalData ...interface{}) {
+	if a.wailsCtx == nil {
+		return
+	}
+	wailsruntime.EventsEmit(a.wailsCtx, eventName, optionalData...)
+}
+
+// runBackground starts every long-running service: SQLite load, the Pear Desktop
+// websocket bridge, and the Twitch EventSub clients.
+func (a *App) runBackground() error {
 	// load sqlite
 	err := a.loadSqliteSettings()
 	if err != nil {
@@ -127,13 +148,17 @@ func (a *App) Run() error {
 	}
 
 	notifyIfTokenExpired("main", a.twitchDataStruct.accessToken, a.twitchDataStruct.isAuthenticated)
-	notifyTokenExpiresSoon("main", a.twitchDataStruct.expiresDate, a.twitchDataStruct.isAuthenticated)
-	if a.twitchDataStructBot.accessToken != "" {
+	a.notifyImplicitGrantAccessTokenExpiresSoon(false)
+	notifyRefreshTokenExpiresSoon("main", a.twitchDataStruct.refreshTokenLastUsedAt, a.twitchDataStruct.refreshToken)
+	if a.twitchDataStructBot.accessToken != "" || a.twitchDataStructBot.refreshToken != "" {
 		notifyIfTokenExpired("bot", a.twitchDataStructBot.accessToken, a.twitchDataStructBot.isAuthenticated)
-		notifyTokenExpiresSoon("bot", a.twitchDataStructBot.expiresDate, a.twitchDataStructBot.isAuthenticated)
+		a.notifyImplicitGrantAccessTokenExpiresSoon(true)
+		notifyRefreshTokenExpiresSoon("bot", a.twitchDataStructBot.refreshTokenLastUsedAt, a.twitchDataStructBot.refreshToken)
 	}
 
-	// Auto reconnect pear desktop and funnel mesasges to channel
+	go a.runTwitchTokenMaintenance()
+
+	// Auto reconnect pear desktop and funnel messages to channel
 	log.Println("Pear Desktop WS service starting...")
 	ws := recws.RecConn{
 		RecIntvlFactor: 1,               // multiplier backoff
@@ -217,58 +242,6 @@ func (a *App) Run() error {
 		}
 	}()
 
-	// Send msgs to ws clients
-	go func() {
-		for {
-			data := <-a.clientsBroadcast
-			a.clientsMu.Lock()
-			for ws := range a.clients {
-				websocket.Message.Send(ws, data)
-			}
-			a.clientsMu.Unlock()
-		}
-	}()
-
-	// Echo instance
-	e := echo.New()
-	e.HideBanner = true
-	e.HidePort = true
-
-	// Middleware
-	e.Use(middleware.Recover())
-	e.Use(middleware.StaticWithConfig(middleware.StaticConfig{
-		Root:       "build",
-		Index:      "index.html",
-		Filesystem: http.FS(staticControlPanelFS),
-		HTML5:      true,
-	}))
-
-	apiV1 := e.Group("/api/v1")
-	apiV1.POST("/twitch-oauth", a.handleApiV1TwitchOAuthPOST)
-	apiV1.GET("/settings", a.handleApiV1SettingsGET)
-	apiV1.PATCH("/settings", a.handleApiV1SettingsPATCH)
-	apiV1.GET("/ws", a.handleApiV1WsGET)
-	apiV1.DELETE("/queue/:idx", a.handleApiV1QueueDeleteDELETE)
-	apiV1Requesters := apiV1.Group("/requesters")
-	apiV1Requesters.GET("/history", a.handleApiV1RequestersHistoryGET)
-	apiV1Twitch := apiV1.Group("/twitch")
-	apiV1Twitch.GET("/custom-rewards", a.handleApiV1TwitchCustomRewardsGET)
-
-	port := findAvailablePort()
-	controlPanelURL := fmt.Sprintf("http://localhost:%d/", port)
-
-	var cmd string
-	var args []string
-	switch runtime.GOOS {
-	case "windows":
-		cmd = "cmd"
-		args = []string{"/c", "start"}
-	case "darwin":
-		cmd = "open"
-	default: // "linux", "freebsd", "openbsd", "netbsd"
-		cmd = "xdg-open"
-	}
-	args = append(args, controlPanelURL) // must use localhost here because twitch does not allow 127.0.0.1
 	twitchTokenExpiresSoon := a.twitchDataStruct.isAuthenticated && time.Now().Add(-15*24*time.Hour).After(a.twitchDataStruct.expiresDate)
 	if a.twitchDataStruct.isAuthenticated && twitchTokenExpiresSoon {
 		log.Println("ALERT! Main account Token expiry is soon, consider refreshing token.")
@@ -277,38 +250,6 @@ func (a *App) Run() error {
 	if a.twitchDataStructBot.isAuthenticated && twitchTokenBotExpiresSoon {
 		log.Println("ALERT! Bot Token expiry is soon, consider refreshing token.")
 	}
-	if !a.twitchDataStruct.isAuthenticated || a.songRequestRewardID == "" || twitchTokenExpiresSoon || twitchTokenBotExpiresSoon {
-		exec.Command(cmd, args...).Start()
-	} else {
-		time.Sleep(5 * time.Second)
-		log.Println("Friendly reminder, the control panel is available at " + controlPanelURL)
-	}
-	return e.Start(fmt.Sprintf("%s:%d", listenIP, port))
-}
 
-var listenIP = "127.0.0.1"
-
-func isPortAvailable(port int) bool {
-	ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", listenIP, port))
-	if err != nil {
-		return false
-	}
-	ln.Close()
-	return true
-}
-
-// findAvailablePort tries ports 3999→3000 (decrementing), then 8080→65535 (incrementing).
-func findAvailablePort() int {
-	for port := 3999; port >= 3000; port-- {
-		if isPortAvailable(port) {
-			return port
-		}
-	}
-	for port := 8080; port <= 65535; port++ {
-		if isPortAvailable(port) {
-			return port
-		}
-	}
-	log.Fatal("No available port found")
-	return 0
+	return nil
 }

@@ -37,6 +37,28 @@
 	padding: 2em;
 }
 
+.device-auth-code {
+	font-size: 2rem;
+	font-weight: 700;
+	letter-spacing: 0.2em;
+}
+
+.device-auth-session {
+	margin-top: 1.5rem;
+}
+
+.auth-status.ok {
+	color: #00c896;
+}
+
+.auth-status.err {
+	color: #ff6b6b;
+}
+
+.twitch-connect-button {
+	margin-top: 1rem;
+}
+
 .read-the-docs {
 	color: #888;
 }

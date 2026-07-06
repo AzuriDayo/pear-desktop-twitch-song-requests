@@ -106,6 +106,7 @@ local-*.cmd
 __debug_bin*
 sqlite3*
 .vscode/launch.json
+cmd/main/frontend
 cmd/main/build
 debug_dumps
 openapi-generator-cli-*.jar

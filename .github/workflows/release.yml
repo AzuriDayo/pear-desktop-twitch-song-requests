@@ -10,17 +10,12 @@ permissions:
   contents: read
 
 jobs:
-  build-web:
+  version:
     runs-on: ubuntu-latest
     outputs:
       ref: ${{ steps.version-tag-ref.outputs.ref }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: voidzero-dev/setup-vp@2dec1e33f4ab2c6d5bce1b0c4607961bb1a3f7a1 # v1.1.2
-        with:
-          node-version-file: ".node-version"
-          cache: true
-          run-install: true
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           go-version-file: go.mod
@@ -33,76 +28,89 @@ jobs:
           else
             echo "ref=v0.0.0+${{ github.sha }}" >>"$GITHUB_OUTPUT"
           fi
-      - shell: bash
-        run: vp run build
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: web-assets
-          path: control-panel/build
-          if-no-files-found: error
 
-  build-go:
-    name: go build ${{ matrix.goos }} ${{ matrix.goarch }}
-    needs: build-web
+  # Wails v2 uses native WebViews and CGO, so each platform must be built on its
+  # own native runner (cross-compilation is not supported).
+  build:
+    name: build ${{ matrix.artifact_name }}
+    needs: version
     runs-on: ${{ matrix.runner }}
     strategy:
+      fail-fast: false
       matrix:
         include:
-          - goos: linux
-            goarch: amd64
-            runner: ubuntu-latest
-            artifact_name: pear-desktop-twitch-song-requests_linux_amd64
-            exec_name: pear-desktop-twitch-song-requests_linux_amd64
-          - goos: linux
-            goarch: arm64
-            runner: ubuntu-24.04-arm
-            artifact_name: pear-desktop-twitch-song-requests_linux_arm64
-            exec_name: pear-desktop-twitch-song-requests_linux_arm64
-          - goos: windows
-            goarch: amd64
-            runner: ubuntu-latest
-            artifact_name: pear-desktop-twitch-song-requests_windows_x64
+          - runner: windows-latest
+            platform: windows/amd64
             exec_name: pear-desktop-twitch-song-requests_windows_x64.exe
-          - goos: windows
-            goarch: arm64
-            runner: ubuntu-24.04-arm
-            artifact_name: pear-desktop-twitch-song-requests_windows_on_arm
+            artifact_name: pear-desktop-twitch-song-requests_windows_x64
+          - runner: windows-11-arm
+            platform: windows/arm64
             exec_name: pear-desktop-twitch-song-requests_windows_on_arm.exe
-          - goos: darwin
-            goarch: amd64
-            runner: ubuntu-latest
-            artifact_name: pear-desktop-twitch-song-requests_macos_intel
+            artifact_name: pear-desktop-twitch-song-requests_windows_on_arm
+          - runner: ubuntu-latest
+            platform: linux/amd64
+            exec_name: pear-desktop-twitch-song-requests_linux_amd64
+            artifact_name: pear-desktop-twitch-song-requests_linux_amd64
+          - runner: ubuntu-24.04-arm
+            platform: linux/arm64
+            exec_name: pear-desktop-twitch-song-requests_linux_arm64
+            artifact_name: pear-desktop-twitch-song-requests_linux_arm64
+          - runner: macos-13
+            platform: darwin/amd64
             exec_name: pear-desktop-twitch-song-requests_macos_intel
-          - goos: darwin
-            goarch: arm64
-            runner: ubuntu-24.04-arm
-            artifact_name: pear-desktop-twitch-song-requests_macos_apple_silicon
+            artifact_name: pear-desktop-twitch-song-requests_macos_intel
+          - runner: macos-14
+            platform: darwin/arm64
             exec_name: pear-desktop-twitch-song-requests_macos_apple_silicon
+            artifact_name: pear-desktop-twitch-song-requests_macos_apple_silicon
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: voidzero-dev/setup-vp@2dec1e33f4ab2c6d5bce1b0c4607961bb1a3f7a1 # v1.1.2
+        with:
+          node-version-file: ".node-version"
+          cache: true
+          run-install: true
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           go-version-file: go.mod
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: web-assets
-          path: cmd/main/build
-      - shell: bash
+      - name: Install Linux Wails dependencies
+        if: runner.os == 'Linux'
         run: |
-          go mod download
-          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
-            go build -ldflags="-s -w -X main.version=${{ needs.build-web.outputs.ref }}" \
-            -trimpath -o "${{ matrix.exec_name }}" ./cmd/main
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+      - name: Build frontend
+        shell: bash
+        run: vp run build
+      - name: Build desktop app
+        shell: bash
+        working-directory: cmd/main
+        run: |
+          wails build -s -skipbindings -m -trimpath \
+            -platform "${{ matrix.platform }}" \
+            -ldflags "-X main.version=${{ needs.version.outputs.ref }}" \
+            -o "${{ matrix.exec_name }}"
+      - name: Stage artifact
+        shell: bash
+        run: |
+          mkdir -p dist
+          if [[ '${{ runner.os }}' == 'macOS' ]]; then
+            app="$(ls -d cmd/main/build/bin/*.app | head -n1)"
+            ditto -c -k --keepParent "$app" "dist/${{ matrix.artifact_name }}.zip"
+          else
+            cp "cmd/main/build/bin/${{ matrix.exec_name }}" "dist/${{ matrix.exec_name }}"
+          fi
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ matrix.artifact_name }}
-          path: ${{ matrix.exec_name }}
+          path: dist/*
           compression-level: 0
           if-no-files-found: error
           archive: false
 
   publish:
-    needs: [build-web, build-go]
+    needs: [version, build]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -116,7 +124,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: Release ${{ needs.build-web.outputs.ref }}
+          name: Release ${{ needs.version.outputs.ref }}
           prerelease: ${{ contains(github.ref, '-rc') }}
           make_latest: true
           generate_release_notes: true
@@ -127,5 +135,5 @@ jobs:
             pear-desktop-twitch-song-requests_windows_on_arm.exe
             pear-desktop-twitch-song-requests_linux_amd64
             pear-desktop-twitch-song-requests_linux_arm64
-            pear-desktop-twitch-song-requests_macos_intel
-            pear-desktop-twitch-song-requests_macos_apple_silicon
+            pear-desktop-twitch-song-requests_macos_intel.zip
+            pear-desktop-twitch-song-requests_macos_apple_silicon.zip

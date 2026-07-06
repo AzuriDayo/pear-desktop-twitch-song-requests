@@ -2,15 +2,12 @@ package main
 
 //lint:file-ignore ST1001 Dot imports by jet
 import (
-	"errors"
-	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/gen/model"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/data"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/databaseconn"
-	"github.com/nicklaw5/helix/v2"
 
 	. "github.com/azuridayo/pear-desktop-twitch-song-requests/gen/table"
 	. "github.com/go-jet/jet/v2/sqlite"
@@ -41,11 +38,27 @@ func (a *App) loadSqliteSettings() error {
 		if result.Key == data.DB_KEY_TWITCH_ACCESS_TOKEN {
 			a.twitchDataStruct.accessToken = result.Value
 		}
+		if result.Key == data.DB_KEY_TWITCH_REFRESH_TOKEN {
+			a.twitchDataStruct.refreshToken = result.Value
+		}
+		if result.Key == data.DB_KEY_TWITCH_REFRESH_TOKEN_LAST_USED {
+			if t, err := time.Parse(time.RFC3339, result.Value); err == nil {
+				a.twitchDataStruct.refreshTokenLastUsedAt = t
+			}
+		}
 		if result.Key == data.DB_KEY_TWITCH_SONG_REQUEST_REWARD_ID {
 			a.songRequestRewardID = result.Value
 		}
 		if result.Key == data.DB_KEY_TWITCH_ACCESS_TOKEN_BOT {
 			a.twitchDataStructBot.accessToken = result.Value
+		}
+		if result.Key == data.DB_KEY_TWITCH_REFRESH_TOKEN_BOT {
+			a.twitchDataStructBot.refreshToken = result.Value
+		}
+		if result.Key == data.DB_KEY_TWITCH_REFRESH_TOKEN_LAST_USED_BOT {
+			if t, err := time.Parse(time.RFC3339, result.Value); err == nil {
+				a.twitchDataStructBot.refreshTokenLastUsedAt = t
+			}
 		}
 		if permissionKeys[result.Key] {
 			if v, err := strconv.Atoi(result.Value); err == nil && v >= data.PermissionLevelBroadcaster && v <= data.PermissionLevelViewer {
@@ -54,56 +67,25 @@ func (a *App) loadSqliteSettings() error {
 		}
 	}
 
-	if a.twitchDataStruct.accessToken != "" {
-		isValid, response, err := a.helix.ValidateToken(a.twitchDataStruct.accessToken)
-		if err != nil {
-			// req error
+	if err := a.validateLoadedTwitchToken(false); err != nil {
+		return err
+	}
+	if a.twitchDataStructBot.accessToken != "" || a.twitchDataStructBot.refreshToken != "" {
+		if err := a.validateLoadedTwitchToken(true); err != nil {
 			return err
-		}
-		if response.StatusCode == http.StatusOK && isValid {
-			expiresIn := response.Data.ExpiresIn
-			strDate := response.Header.Get("Date")
-			t, err := time.Parse(data.TWITCH_SERVER_DATE_LAYOUT, strDate)
-			if err != nil {
-				return errors.New("Failed to validate server date time expiry, original error:\n" + err.Error())
-			}
-			t = t.Add(time.Duration(expiresIn) * time.Second)
-			a.helix.SetUserAccessToken(a.twitchDataStruct.accessToken)
-			a.twitchDataStruct.expiresDate = t
-			a.twitchDataStruct.isAuthenticated = true
-			a.twitchDataStruct.userID = response.Data.UserID
-			a.twitchDataStruct.login = response.Data.Login
-
-			resp, err := a.helix.GetStreams(&helix.StreamsParams{
-				UserLogins: []string{a.twitchDataStruct.login},
-			})
-			if err == nil && len(resp.Data.Streams) > 0 && resp.Data.Streams[0].ID != "" {
-				a.streamOnline = true
-			}
 		}
 	}
 
-	if a.twitchDataStructBot.accessToken != "" {
-		isValid, response, err := a.helixBot.ValidateToken(a.twitchDataStructBot.accessToken)
-		if err != nil {
-			// req error
-			return err
-		}
-		if response.StatusCode == http.StatusOK && isValid {
-			expiresIn := response.Data.ExpiresIn
-			strDate := response.Header.Get("Date")
-			t, err := time.Parse(data.TWITCH_SERVER_DATE_LAYOUT, strDate)
-			if err != nil {
-				return errors.New("Failed to validate server date time expiry, original error:\n" + err.Error())
-			}
-			t = t.Add(time.Duration(expiresIn) * time.Second)
-			a.helixBot.SetUserAccessToken(a.twitchDataStructBot.accessToken)
-			a.twitchDataStructBot.expiresDate = t
-			a.twitchDataStructBot.isAuthenticated = true
-			a.twitchDataStructBot.userID = response.Data.UserID
-			a.twitchDataStructBot.login = response.Data.Login
-		}
-	}
+	a.migrateRefreshTokenLastUsed(false)
+	a.migrateRefreshTokenLastUsed(true)
 
 	return nil
+}
+
+func (a *App) migrateRefreshTokenLastUsed(forBot bool) {
+	td := twitchDataForBot(a, forBot)
+	if td.refreshToken == "" || !td.refreshTokenLastUsedAt.IsZero() {
+		return
+	}
+	_ = a.markRefreshTokenUsed(forBot)
 }

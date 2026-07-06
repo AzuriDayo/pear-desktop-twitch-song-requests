@@ -9,6 +9,8 @@ const initialState: ITwitchState = {
 	login: "",
 	login_bot: "",
 	expires_in_bot: "",
+	refresh_expires_in: "",
+	refresh_expires_in_bot: "",
 	cmd_permissions: defaultCmdPermissions,
 };
 

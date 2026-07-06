@@ -45,25 +45,19 @@ func (a *App) SetSubscriptionHandlers() {
 	a.twitchWSService.Client().OnEventStreamOnline(func(event twitch.EventStreamOnline) {
 		a.streamOnline = true
 
-		j, _ := json.Marshal(map[string]any{
-			"stream_online": true,
-		})
-		a.clientsBroadcast <- string(j)
+		a.emit("TWITCH_INFO", a.twitchInfoPayload())
 		log.Println("STREAM_ONLINE")
 
 		notifyIfTokenExpired("main", a.twitchDataStruct.accessToken, a.twitchDataStruct.isAuthenticated)
-		notifyTokenExpiresSoon("main", a.twitchDataStruct.expiresDate, a.twitchDataStruct.isAuthenticated)
-		if a.twitchDataStructBot.accessToken != "" {
+		a.notifyImplicitGrantAccessTokenExpiresSoon(false)
+		if a.twitchDataStructBot.accessToken != "" || a.twitchDataStructBot.refreshToken != "" {
 			notifyIfTokenExpired("bot", a.twitchDataStructBot.accessToken, a.twitchDataStructBot.isAuthenticated)
-			notifyTokenExpiresSoon("bot", a.twitchDataStructBot.expiresDate, a.twitchDataStructBot.isAuthenticated)
+			a.notifyImplicitGrantAccessTokenExpiresSoon(true)
 		}
 	})
 	a.twitchWSService.Client().OnEventStreamOffline(func(event twitch.EventStreamOffline) {
 		a.streamOnline = false
-		j, _ := json.Marshal(map[string]any{
-			"stream_online": false,
-		})
-		a.clientsBroadcast <- string(j)
+		a.emit("TWITCH_INFO", a.twitchInfoPayload())
 		log.Println("STREAM_OFFLINE")
 	})
 	a.twitchWSService.Client().OnEventChannelChatMessage(func(event twitch.EventChannelChatMessage) {

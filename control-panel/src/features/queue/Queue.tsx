@@ -10,6 +10,7 @@ import ListItemText from "@mui/material/ListItemText";
 import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
 import DeleteIcon from "@mui/icons-material/Delete";
+import { DeleteQueueItem } from "../../wailsjs/go/main/App";
 
 const Queue = () => {
 	const { song_queue, isLoaded } = useAppSelector((state) => state.songQueueState);
@@ -22,15 +23,9 @@ const Queue = () => {
 		if (deletingIdx !== null) return;
 		setDeletingIdx(i);
 		try {
-			// API uses 1-based index, matching !delsong # semantics
-			const res = await fetch(`/api/v1/queue/${i + 1}`, {
-				method: "DELETE",
-			});
-			if (res.ok) {
-				dispatch(removeSongAtIndex({ index: i }));
-			} else {
-				console.error("Failed to delete song from queue:", res.status);
-			}
+			// Uses 1-based index, matching !delsong # semantics
+			await DeleteQueueItem(i + 1);
+			dispatch(removeSongAtIndex({ index: i }));
 		} catch (err) {
 			console.error("Error deleting song from queue:", err);
 		} finally {

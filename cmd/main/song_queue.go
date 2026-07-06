@@ -17,6 +17,11 @@ type SongQueueItem struct {
 
 var songQueue = []SongQueueItem{}
 
+// QueueInfoPayload is the payload for the QUEUE_INFO event (full queue snapshot).
+type QueueInfoPayload struct {
+	SongQueue []SongQueueItem `json:"song_queue"`
+}
+
 type playerSonginfo struct {
 	VideoId          string `json:"videoId"`
 	ImageSrc         string `json:"imageSrc"`
