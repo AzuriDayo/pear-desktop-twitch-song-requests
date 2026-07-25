@@ -52,6 +52,20 @@ func (a *App) loadSqliteSettings() error {
 				a.cmdPermissions[result.Key] = v
 			}
 		}
+		if result.Key == data.DB_KEY_CMD_ALIASES {
+			if aliases, err := parseCmdAliasesJSON(result.Value); err == nil {
+				if validated, err := validateCmdAliases(aliases); err == nil {
+					a.cmdAliases = validated
+				}
+			}
+		}
+		if result.Key == data.DB_KEY_CMD_DISABLED_BUILTINS {
+			if disabled, err := parseCmdDisabledBuiltinsJSON(result.Value); err == nil {
+				if validated, err := validateCmdDisabledBuiltins(disabled); err == nil {
+					a.cmdDisabledBuiltins = validated
+				}
+			}
+		}
 	}
 
 	if a.twitchDataStruct.accessToken != "" {

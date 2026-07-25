@@ -28,6 +28,7 @@ import (
 )
 
 var version = "development"
+var port = 3999
 
 type twitchData struct {
 	accessToken     string
@@ -75,6 +76,8 @@ type App struct {
 	clientsBroadcast        chan string
 	songRequestRewardID     string
 	cmdPermissions          map[string]int
+	cmdAliases              map[string]string // alias (e.g. "!q") -> canonical short name (e.g. "queue")
+	cmdDisabledBuiltins     map[string]bool   // short name -> disabled (aliases to it still work)
 }
 
 // defaultCmdPermissions returns the default minimum permission levels for each command.
@@ -113,6 +116,8 @@ func NewApp() *App {
 		clients:                 make(map[*websocket.Conn]struct{}),
 		pearDesktopIncomingMsgs: make(chan []byte),
 		cmdPermissions:          defaultCmdPermissions(),
+		cmdAliases:              map[string]string{},
+		cmdDisabledBuiltins:     map[string]bool{},
 	}
 }
 
@@ -254,7 +259,6 @@ func (a *App) Run() error {
 	apiV1Twitch := apiV1.Group("/twitch")
 	apiV1Twitch.GET("/custom-rewards", a.handleApiV1TwitchCustomRewardsGET)
 
-	port := findAvailablePort()
 	controlPanelURL := fmt.Sprintf("http://localhost:%d/", port)
 
 	var cmd string
@@ -295,20 +299,4 @@ func isPortAvailable(port int) bool {
 	}
 	ln.Close()
 	return true
-}
-
-// findAvailablePort tries ports 3999→3000 (decrementing), then 8080→65535 (incrementing).
-func findAvailablePort() int {
-	for port := 3999; port >= 3000; port-- {
-		if isPortAvailable(port) {
-			return port
-		}
-	}
-	for port := 8080; port <= 65535; port++ {
-		if isPortAvailable(port) {
-			return port
-		}
-	}
-	log.Fatal("No available port found")
-	return 0
 }

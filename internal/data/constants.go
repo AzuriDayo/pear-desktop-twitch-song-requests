@@ -20,6 +20,13 @@ const (
 	DB_KEY_CMD_PERMISSION_SONG    = "cmd_permission_song"
 	DB_KEY_CMD_PERMISSION_DELSONG = "cmd_permission_delsong"
 
+	// Command aliases: JSON object mapping alias (e.g. "!q") -> canonical short name (e.g. "queue")
+	DB_KEY_CMD_ALIASES = "cmd_aliases"
+
+	// Disabled built-in command names: JSON array of short names (e.g. ["queue","song"]).
+	// Aliases targeting a disabled built-in still work; only the original !name is blocked.
+	DB_KEY_CMD_DISABLED_BUILTINS = "cmd_disabled_builtins"
+
 	// Permission levels (0 = most restrictive, 4 = everyone)
 	PermissionLevelBroadcaster = 0
 	PermissionLevelModerator   = 1
