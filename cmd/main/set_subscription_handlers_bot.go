@@ -37,6 +37,9 @@ func (a *App) SetSubscriptionHandlersBot() {
 		realBroadcasterID := a.twitchDataStruct.userID
 		trimmedText := strings.TrimSpace(event.Message.Text)
 		trimmedText = strings.Trim(trimmedText, " ͏") // idk why twitch adds this character
+		var fromAlias bool
+		trimmedText, fromAlias = a.resolveCmdAlias(trimmedText)
+		event.Message.Text = trimmedText
 
 		if strings.EqualFold(event.ChatterUserLogin, a.twitchDataStructBot.login) {
 			isSelf = true
@@ -134,7 +137,9 @@ func (a *App) SetSubscriptionHandlersBot() {
 			isModerator = true
 		}
 
-		if UserMeetsPermission(a.cmdPermissions[data.DB_KEY_CMD_PERMISSION_SR], isBroadcaster, isModerator, isVip, isSub) && len(trimmedText) > 4 && strings.EqualFold(trimmedText[:4], "!sr ") {
+		if a.builtinAllowed("sr", fromAlias) &&
+			UserMeetsPermission(a.cmdPermissions[data.DB_KEY_CMD_PERMISSION_SR], isBroadcaster, isModerator, isVip, isSub) &&
+			len(trimmedText) > 4 && strings.EqualFold(trimmedText[:4], "!sr ") {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
@@ -142,7 +147,7 @@ func (a *App) SetSubscriptionHandlersBot() {
 			return
 		}
 
-		if strings.EqualFold(trimmedText, "!skip") && isModerator {
+		if strings.EqualFold(trimmedText, "!skip") && isModerator && a.builtinAllowed("skip", fromAlias) {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
@@ -177,7 +182,7 @@ func (a *App) SetSubscriptionHandlersBot() {
 			return
 		}
 
-		if strings.EqualFold(trimmedText, "!song") {
+		if strings.EqualFold(trimmedText, "!song") && a.builtinAllowed("song", fromAlias) {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
@@ -232,7 +237,7 @@ func (a *App) SetSubscriptionHandlersBot() {
 			return
 		}
 
-		if strings.EqualFold(trimmedText, "!queue") {
+		if strings.EqualFold(trimmedText, "!queue") && a.builtinAllowed("queue", fromAlias) {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
@@ -326,7 +331,7 @@ func (a *App) SetSubscriptionHandlersBot() {
 			return
 		}
 
-		if strings.HasPrefix(trimmedText, "!delsong") {
+		if strings.HasPrefix(strings.ToLower(trimmedText), "!delsong") && a.builtinAllowed("delsong", fromAlias) {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}

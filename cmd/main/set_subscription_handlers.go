@@ -73,6 +73,9 @@ func (a *App) SetSubscriptionHandlers() {
 		isVip := false
 		trimmedText := strings.TrimSpace(event.Message.Text)
 		trimmedText = strings.Trim(trimmedText, " ͏") // idk why twitch adds this character
+		var fromAlias bool
+		trimmedText, fromAlias = a.resolveCmdAlias(trimmedText)
+		event.Message.Text = trimmedText
 
 		for _, v := range event.Badges {
 			if v.SetId == "broadcaster" {
@@ -113,7 +116,11 @@ func (a *App) SetSubscriptionHandlers() {
 		}
 
 		log.Printf("Chat message from %s: %s %s\n", event.ChatterUserLogin, trimmedText, event.ChannelPointsCustomRewardId)
-		if (a.songRequestRewardID == event.ChannelPointsCustomRewardId && event.ChannelPointsCustomRewardId != "") || (UserMeetsPermission(a.cmdPermissions[data.DB_KEY_CMD_PERMISSION_SR], isBroadcaster, isModerator, isVip, isSub) && len(trimmedText) > 4 && strings.EqualFold(trimmedText[:4], "!sr ")) {
+		isReward := a.songRequestRewardID == event.ChannelPointsCustomRewardId && event.ChannelPointsCustomRewardId != ""
+		isSrCmd := a.builtinAllowed("sr", fromAlias) &&
+			UserMeetsPermission(a.cmdPermissions[data.DB_KEY_CMD_PERMISSION_SR], isBroadcaster, isModerator, isVip, isSub) &&
+			len(trimmedText) > 4 && strings.EqualFold(trimmedText[:4], "!sr ")
+		if isReward || isSrCmd {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
@@ -121,7 +128,7 @@ func (a *App) SetSubscriptionHandlers() {
 			return
 		}
 
-		if strings.EqualFold(trimmedText, "!skip") && isModerator {
+		if strings.EqualFold(trimmedText, "!skip") && isModerator && a.builtinAllowed("skip", fromAlias) {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
@@ -156,7 +163,7 @@ func (a *App) SetSubscriptionHandlers() {
 			return
 		}
 
-		if strings.EqualFold(trimmedText, "!song") {
+		if strings.EqualFold(trimmedText, "!song") && a.builtinAllowed("song", fromAlias) {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
@@ -211,7 +218,7 @@ func (a *App) SetSubscriptionHandlers() {
 			return
 		}
 
-		if strings.EqualFold(trimmedText, "!queue") {
+		if strings.EqualFold(trimmedText, "!queue") && a.builtinAllowed("queue", fromAlias) {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}
@@ -305,7 +312,7 @@ func (a *App) SetSubscriptionHandlers() {
 			return
 		}
 
-		if strings.HasPrefix(trimmedText, "!delsong") {
+		if strings.HasPrefix(strings.ToLower(trimmedText), "!delsong") && a.builtinAllowed("delsong", fromAlias) {
 			if !a.streamOnline && !isBroadcaster {
 				return
 			}

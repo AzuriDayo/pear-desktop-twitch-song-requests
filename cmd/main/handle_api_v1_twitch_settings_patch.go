@@ -63,6 +63,31 @@ func (a *App) handleApiV1SettingsPATCH(c echo.Context) error {
 		data.DB_KEY_CMD_PERMISSION_DELSONG: true,
 	}
 
+	// Validate alias-related settings before writing so a bad payload cannot
+	// partially update one key while rejecting the other.
+	var validatedAliases map[string]string
+	var validatedDisabled map[string]bool
+	if v, ok := settings[data.DB_KEY_CMD_ALIASES]; ok {
+		aliases, err := parseCmdAliasesJSON(v)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
+		}
+		validatedAliases, err = validateCmdAliases(aliases)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
+		}
+	}
+	if v, ok := settings[data.DB_KEY_CMD_DISABLED_BUILTINS]; ok {
+		disabled, err := parseCmdDisabledBuiltinsJSON(v)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
+		}
+		validatedDisabled, err = validateCmdDisabledBuiltins(disabled)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
+		}
+	}
+
 	for k, v := range settings {
 		if k == data.DB_KEY_TWITCH_SONG_REQUEST_REWARD_ID {
 			newSetting := model.Settings{
@@ -95,6 +120,40 @@ func (a *App) handleApiV1SettingsPATCH(c echo.Context) error {
 				continue
 			}
 			a.cmdPermissions[k] = level
+		}
+
+		if k == data.DB_KEY_CMD_ALIASES {
+			raw, err := marshalCmdAliasesJSON(validatedAliases)
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, echo.Map{"error": "serialize cmd_aliases"})
+			}
+			newSetting := model.Settings{Key: k, Value: raw}
+			stmt := Settings.INSERT(Settings.AllColumns).MODEL(newSetting).ON_CONFLICT(Settings.Key).DO_UPDATE(SET(
+				Settings.Value.SET(String(raw)),
+			))
+			_, err = stmt.ExecContext(c.Request().Context(), db)
+			if err != nil {
+				log.Println("handleApiV1SettingsPATCH: failed to save cmd_aliases", err)
+				return c.JSON(http.StatusBadRequest, echo.Map{"error": "save cmd_aliases failed"})
+			}
+			a.cmdAliases = validatedAliases
+		}
+
+		if k == data.DB_KEY_CMD_DISABLED_BUILTINS {
+			raw, err := marshalCmdDisabledBuiltinsJSON(validatedDisabled)
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, echo.Map{"error": "serialize cmd_disabled_builtins"})
+			}
+			newSetting := model.Settings{Key: k, Value: raw}
+			stmt := Settings.INSERT(Settings.AllColumns).MODEL(newSetting).ON_CONFLICT(Settings.Key).DO_UPDATE(SET(
+				Settings.Value.SET(String(raw)),
+			))
+			_, err = stmt.ExecContext(c.Request().Context(), db)
+			if err != nil {
+				log.Println("handleApiV1SettingsPATCH: failed to save cmd_disabled_builtins", err)
+				return c.JSON(http.StatusBadRequest, echo.Map{"error": "save cmd_disabled_builtins failed"})
+			}
+			a.cmdDisabledBuiltins = validatedDisabled
 		}
 	}
 
