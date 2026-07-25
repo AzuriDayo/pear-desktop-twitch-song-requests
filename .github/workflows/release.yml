@@ -102,6 +102,7 @@ jobs:
           archive: false
 
   publish:
+    if: github.ref_type == 'tag'
     needs: [build-web, build-go]
     runs-on: ubuntu-latest
     permissions:
@@ -112,7 +113,6 @@ jobs:
           pattern: pear-desktop-twitch-song-requests_*
           merge-multiple: true
       - uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3.0.0
-        if: github.ref_type == 'tag'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
