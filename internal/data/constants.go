@@ -27,6 +27,8 @@ const (
 	// Aliases targeting a disabled built-in still work; only the original !name is blocked.
 	DB_KEY_CMD_DISABLED_BUILTINS = "cmd_disabled_builtins"
 
+	DB_KEY_PEAR_DESKTOP_API_PAYLOAD_DUMP_ENABLED = "pear_desktop_api_payload_dump_enabled"
+
 	// Permission levels (0 = most restrictive, 4 = everyone)
 	PermissionLevelBroadcaster = 0
 	PermissionLevelModerator   = 1

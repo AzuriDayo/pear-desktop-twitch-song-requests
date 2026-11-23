@@ -10,6 +10,7 @@ import (
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/gen/model"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/data"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/databaseconn"
+	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/songrequests"
 	"github.com/nicklaw5/helix/v2"
 
 	. "github.com/azuridayo/pear-desktop-twitch-song-requests/gen/table"
@@ -37,7 +38,11 @@ func (a *App) loadSqliteSettings() error {
 		data.DB_KEY_CMD_PERMISSION_DELSONG: true,
 	}
 
+	songrequests.SetAPIPayloadDumpEnabled(false)
 	for _, result := range results {
+		if result.Key == data.DB_KEY_PEAR_DESKTOP_API_PAYLOAD_DUMP_ENABLED {
+			songrequests.SetAPIPayloadDumpEnabled(result.Value == "true")
+		}
 		if result.Key == data.DB_KEY_TWITCH_ACCESS_TOKEN {
 			a.twitchDataStruct.accessToken = result.Value
 		}
