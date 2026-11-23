@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/data"
+	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/songrequests"
 	"github.com/labstack/echo/v4"
 )
 
@@ -21,6 +22,7 @@ func (a *App) handleApiV1SettingsGET(c echo.Context) error {
 		}
 	}
 	return c.JSON(http.StatusOK, echo.Map{
+		data.DB_KEY_PEAR_DESKTOP_API_PAYLOAD_DUMP_ENABLED: songrequests.APIPayloadDumpEnabled(),
 		"reward_id": a.songRequestRewardID,
 		"cmd_permissions": echo.Map{
 			data.DB_KEY_CMD_PERMISSION_SR:      a.cmdPermissions[data.DB_KEY_CMD_PERMISSION_SR],

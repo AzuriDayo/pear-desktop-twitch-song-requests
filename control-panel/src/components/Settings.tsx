@@ -95,6 +95,10 @@ export function Settings() {
 		skip: false,
 	});
 	const [aliasStatus, setAliasStatus] = useState("");
+	const [payloadDumpEnabled, setPayloadDumpEnabled] = useState(false);
+	const [debugSettingsLoaded, setDebugSettingsLoaded] = useState(false);
+	const [isSavingDebugSettings, setIsSavingDebugSettings] = useState(false);
+	const [debugStatus, setDebugStatus] = useState("");
 
 	const fetchRewards = useCallback(async () => {
 		setIsRefreshing(true);
@@ -128,12 +132,16 @@ export function Settings() {
 		void (async () => {
 			try {
 				const r = await fetch("/api/v1/settings");
+				if (!r.ok) throw new Error("Failed to load settings");
 				if (r.ok) {
 					const data = (await r.json()) as {
+						pear_desktop_api_payload_dump_enabled?: boolean;
 						cmd_permissions?: Record<CmdPermissionKey, number>;
 						cmd_aliases?: Record<string, string>;
 						cmd_disabled_builtins?: string[];
 					};
+					setPayloadDumpEnabled(data.pear_desktop_api_payload_dump_enabled === true);
+					setDebugSettingsLoaded(true);
 					if (data.cmd_permissions) {
 						setPermissionValues((prev) => ({ ...prev, ...data.cmd_permissions }));
 					}
@@ -160,7 +168,7 @@ export function Settings() {
 					}
 				}
 			} catch {
-				// silently ignore
+				setDebugStatus("Failed to load debug settings. Reload to try again.");
 			}
 		})();
 	}, []);
@@ -254,6 +262,29 @@ export function Settings() {
 			setAliasStatus("Network error, please try again.");
 		}
 	}, [aliasRows, disabledBuiltins]);
+
+	const saveDebugSettings = async () => {
+		setIsSavingDebugSettings(true);
+		setDebugStatus("");
+		try {
+			const r = await fetch(urlPath, {
+				method,
+				body: JSON.stringify({
+					pear_desktop_api_payload_dump_enabled: String(payloadDumpEnabled),
+				}),
+			});
+			if (r.ok) {
+				setDebugStatus("Debug settings saved successfully!");
+			} else {
+				const msg = (await r.json()) as { error?: string };
+				setDebugStatus("Save failed: " + (msg.error ?? "unknown error"));
+			}
+		} catch {
+			setDebugStatus("Network error, please try again.");
+		} finally {
+			setIsSavingDebugSettings(false);
+		}
+	};
 
 	return (
 		<>
@@ -486,6 +517,34 @@ export function Settings() {
 				<button type="submit">Save Aliases</button>
 			</form>
 			{aliasStatus && <h3>{aliasStatus}</h3>}
+
+			<hr />
+			<h2>Debugging</h2>
+			<p>
+				Save Pear Desktop API payloads for debugging (off by default). Currently saves only song
+				search responses to <code>./debug/search/</code>, creating the directory when needed.
+			</p>
+			<form
+				onSubmit={(e) => {
+					e.preventDefault();
+					void saveDebugSettings();
+				}}
+			>
+				<label>
+					<input
+						type="checkbox"
+						checked={payloadDumpEnabled}
+						disabled={!debugSettingsLoaded || isSavingDebugSettings}
+						onChange={(e) => setPayloadDumpEnabled(e.target.checked)}
+					/>{" "}
+					Enable Pear Desktop API payload dumps
+				</label>
+				<br />
+				<button type="submit" disabled={!debugSettingsLoaded || isSavingDebugSettings}>
+					Save Debug Settings
+				</button>
+			</form>
+			{debugStatus && <p role="status">{debugStatus}</p>}
 
 			<br />
 			<br />

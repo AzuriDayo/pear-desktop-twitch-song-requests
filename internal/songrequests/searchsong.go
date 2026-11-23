@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -184,6 +185,10 @@ func SearchSong(query string, minLength int, maxLength int) (*SongResult, error)
 	outBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
+	}
+
+	if err := dumpSearchPayload(strings.TrimSpace(query), outBody); err != nil {
+		log.Println("search songs: failed to dump API payload:", err)
 	}
 
 	rawResults := apiSearchSongResult{}

@@ -13,6 +13,7 @@ import (
 	. "github.com/azuridayo/pear-desktop-twitch-song-requests/gen/table"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/data"
 	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/databaseconn"
+	"github.com/azuridayo/pear-desktop-twitch-song-requests/internal/songrequests"
 	. "github.com/go-jet/jet/v2/sqlite"
 	"github.com/labstack/echo/v4"
 )
@@ -47,6 +48,9 @@ func (a *App) handleApiV1SettingsPATCH(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, echo.Map{
 			"error": "parse request body",
 		})
+	}
+	if v, ok := settings[data.DB_KEY_PEAR_DESKTOP_API_PAYLOAD_DUMP_ENABLED]; ok && v != "true" && v != "false" {
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": "pear_desktop_api_payload_dump_enabled must be true or false"})
 	}
 	db, err := databaseconn.NewDBConnection()
 	if err != nil {
@@ -89,6 +93,18 @@ func (a *App) handleApiV1SettingsPATCH(c echo.Context) error {
 	}
 
 	for k, v := range settings {
+		if k == data.DB_KEY_PEAR_DESKTOP_API_PAYLOAD_DUMP_ENABLED {
+			newSetting := model.Settings{Key: k, Value: v}
+			stmt := Settings.INSERT(Settings.AllColumns).MODEL(newSetting).ON_CONFLICT(Settings.Key).DO_UPDATE(SET(
+				Settings.Value.SET(String(v)),
+			))
+			if _, err := stmt.ExecContext(c.Request().Context(), db); err != nil {
+				log.Println("handleApiV1SettingsPATCH: failed to save API payload dump setting", err)
+				return c.JSON(http.StatusInternalServerError, echo.Map{"error": "save API payload dump setting failed"})
+			}
+			songrequests.SetAPIPayloadDumpEnabled(v == "true")
+		}
+
 		if k == data.DB_KEY_TWITCH_SONG_REQUEST_REWARD_ID {
 			newSetting := model.Settings{
 				Key:   data.DB_KEY_TWITCH_SONG_REQUEST_REWARD_ID,

@@ -13,6 +13,19 @@ This app adds song requests functionality to your Pear Desktop Music App!
 
 👉 Other useful notes: [Stream features and info here](https://gist.github.com/SLAzurin/6cb6da4cb494eedd03b9efd3787aecd4)
 
+# Debug payload dumps
+
+In **Configure settings → Debugging**, enable **Pear Desktop API payload dumps** and
+click **Save Debug Settings** to save song search responses. This setting defaults
+to off, persists across restarts, and takes effect immediately after saving.
+
+Dumps are written under `./debug/search/` relative to the app's working directory;
+missing directories are created automatically. Each JSON file contains
+`{ "searchQuery": "the query sent to Pear Desktop", "payload": <original JSON response> }`.
+Filenames use UTC RFC 3339 timestamps with milliseconds, for example
+`2026-11-23T18:04:05.123Z.json`. On Windows, colons are replaced with hyphens:
+`2026-11-23T18-04-05.123Z.json`.
+
 # (Recommended optional) Download verification
 
 ![alt text](immutable-release-example.png)
